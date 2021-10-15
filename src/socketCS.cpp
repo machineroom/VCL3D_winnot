@@ -2,29 +2,11 @@
 
 
 #include "SocketCS.h"
-#pragma comment(lib, "ws2_32.lib")
 #include <iostream>
 
 using namespace std;
 
-int Socket::nofSockets_= 0;
-
-void Socket::Start() {
-  if (!nofSockets_) {
-    WSADATA info;
-    if (WSAStartup(MAKEWORD(2,0), &info)) {
-      throw "Could not start WSA";
-    }
-  }
-  ++nofSockets_;
-}
-
-void Socket::End() {
-  WSACleanup();
-}
-
 Socket::Socket() : s_(0) {
-  Start();
   // UDP: use SOCK_DGRAM instead of SOCK_STREAM
   s_ = socket(AF_INET,SOCK_STREAM,0);
 
@@ -36,7 +18,6 @@ Socket::Socket() : s_(0) {
 }
 
 Socket::Socket(SOCKET s) : s_(s) {
-  Start();
   refCounter_ = new int(1);
 };
 
@@ -46,8 +27,6 @@ Socket::~Socket() {
     delete refCounter_;
   }
 
-  --nofSockets_;
-  if (!nofSockets_) End();
 }
 
 Socket::Socket(const Socket& o) {
@@ -55,7 +34,6 @@ Socket::Socket(const Socket& o) {
   (*refCounter_)++;
   s_         =o.s_;
 
-  nofSockets_++;
 }
 
 Socket& Socket::operator=(Socket& o) {
@@ -63,8 +41,6 @@ Socket& Socket::operator=(Socket& o) {
 
   refCounter_=o.refCounter_;
   s_         =o.s_;
-
-  nofSockets_++;
 
   return *this;
 }

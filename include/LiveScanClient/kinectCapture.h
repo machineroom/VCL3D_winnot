@@ -14,8 +14,7 @@
 //    }
 #pragma once
 
-#include "stdafx.h"
-#include "ICapture.h"
+#include "iCapture.h"
 #include "Kinect.h"
 #include "utils.h"
 

@@ -16,7 +16,7 @@
 
 #include <vector>
 
-#include "nanoflann.h"
+#include "nanoflann.hpp"
 #include "utils.h"
 
 struct KNNeighborsResult

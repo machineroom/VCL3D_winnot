@@ -14,10 +14,12 @@
 //    }
 #pragma once
 
-#include "stdafx.h"
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <stdint.h>
+
+typedef uint8_t BYTE;
 
 enum INCOMING_MESSAGE_TYPE
 {
@@ -107,5 +109,5 @@ typedef struct RGB
 	BYTE    rgbReserved;
 } RGB;
 
-Point3f RotatePoint(Point3f &point, std::vector<std::vector<float>> &R);
-Point3f InverseRotatePoint(Point3f &point, std::vector<std::vector<float>> &R);
+Point3f RotatePoint(Point3f &point, std::vector<std::vector<float> > &R);
+Point3f InverseRotatePoint(Point3f &point, std::vector<std::vector<float> > &R);

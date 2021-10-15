@@ -5,7 +5,7 @@
 /* 
    Socket.h
 
-   Copyright (C) 2002-2004 René Nyffenegger
+   Copyright (C) 2002-2004 Renï¿½ Nyffenegger
 
    This source code is provided 'as-is', without any express or implied
    warranty. In no event will the author be held liable for any damages
@@ -25,7 +25,7 @@
 
    3. This notice may not be removed or altered from any source distribution.
 
-   René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+   Renï¿½ Nyffenegger rene.nyffenegger@adp-gmbh.ch
 */
 
 //
@@ -35,8 +35,8 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-
-#include <WinSock2.h>
+#include <sys/select.h>
+//#include <WinSock2.h>
 
 #include <string>
 
@@ -67,18 +67,14 @@ protected:
   friend class SocketServer;
   friend class SocketSelect;
 
-  Socket(SOCKET s);
+  Socket(int s);
   Socket();
 
 
-  SOCKET s_;
+  int s_;
 
   int* refCounter_;
 
-private:
-  static void Start();
-  static void End();
-  static int  nofSockets_;
 };
 
 class SocketClient : public Socket {

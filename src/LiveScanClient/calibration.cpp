@@ -14,8 +14,7 @@
 //    }
 
 #include "calibration.h"
-#include "Kinect.h"
-#include "opencv\cv.h"
+#include "opencv/cv.h"
 
 #include <fstream>
 
@@ -95,7 +94,7 @@ bool Calibration::Calibrate(RGB *pBuffer, Point3f *pCameraCoordinates, int cColo
 	
 	Procrustes(marker, marker3D, worldT, worldR);
 
-	vector<vector<float>> Rcopy = worldR;
+	vector<vector<float> > Rcopy = worldR;
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 3; j++)
@@ -169,7 +168,7 @@ void Calibration::SaveCalibration()
 	file.close();
 }
 
-void Calibration::Procrustes(MarkerInfo &marker, vector<Point3f> &markerInWorld, vector<float> &worldToMarkerT, vector<vector<float>> &worldToMarkerR)
+void Calibration::Procrustes(MarkerInfo &marker, vector<Point3f> &markerInWorld, vector<float> &worldToMarkerT, vector<vector<float> > &worldToMarkerR)
 {
 	int nVertices = marker.points.size();
 

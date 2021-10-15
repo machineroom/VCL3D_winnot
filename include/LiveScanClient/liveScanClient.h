@@ -14,12 +14,17 @@
 //    }
 #pragma once
 
-#include "resource.h"
-#include "ImageRenderer.h"
-#include "SocketCS.h"
+//#include "resource.h"
+//#include "ImageRenderer.h"
+#include "socketCS.h"
 #include "calibration.h"
 #include "utils.h"
-#include "KinectCapture.h"
+#ifdef KINECT
+#include "kinectCapture.h"
+#else
+#include "freenectCapture.h"
+#endif
+
 #include "frameFileWriterReader.h"
 #include <thread>
 #include <mutex>

@@ -14,35 +14,29 @@
 //    }
 #pragma once
 
-#include <opencv2/opencv.hpp>
+#include "iCapture.h"
+#include "libfreenect/libfreenect.h"
 #include "utils.h"
-#include "iMarker.h"
 
-using namespace std;
-
-class MarkerDetector : public IMarker
+class FreenectCapture : public ICapture
 {
 public:
-	MarkerDetector();
+	FreenectCapture();
+	~FreenectCapture();
 
-	bool GetMarker(RGB *img, int height, int width, MarkerInfo &marker);
-private:
-	int nMarkerCorners;
-	vector<cv::Point2f> vPts;
+	bool Initialize();
+	bool AcquireFrame();
+	void MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints);
+	void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints);
+	void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints);
+	void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints);
+private:	
+	/*ICoordinateMapper* pCoordinateMapper;
+	IKinectSensor* pKinectSensor;
+	IMultiSourceFrameReader* pMultiSourceFrameReader;
 
-	int nMinSize;
-	int nMaxSize;
-	int nThreshold;
-	double dApproxPolyCoef;
-	double dMarkerFrame;
-	bool bDraw;
-
-	bool GetMarker(cv::Mat &img, MarkerInfo &marker);
-	bool OrderCorners(vector<cv::Point2f> &corners);
-	int GetCode(cv::Mat &img, vector<cv::Point2f> points, vector<cv::Point2f> corners);
-	void CornersSubPix(vector<cv::Point2f> &corners, vector<cv::Point> contour, bool order);
-	cv::Point2f GetIntersection(cv::Vec4f lin1, cv::Vec4f lin2);
-	void GetMarkerPoints(vector<Point3f> &pts);
-	void GetMarkerPointsForWarp(vector<cv::Point2f> &pts);
-	double GetMarkerArea(MarkerInfo &marker);
+	void GetDepthFrame(IMultiSourceFrame* pMultiFrame);
+	void GetColorFrame(IMultiSourceFrame* pMultiFrame);
+	void GetBodyFrame(IMultiSourceFrame* pMultiFrame);
+	void GetBodyIndexFrame(IMultiSourceFrame* pMultiFrame);*/
 };

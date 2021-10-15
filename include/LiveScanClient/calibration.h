@@ -13,12 +13,11 @@
 //        year={2015},
 //    }
 #pragma once
-#include "stdafx.h"
 #include "marker.h"
 #include "utils.h"
 
-vector<float> RotatePoint(vector<float> &point, std::vector<std::vector<float>> &R);
-vector<float> InverseRotatePoint(vector<float> &point, std::vector<std::vector<float>> &R);
+vector<float> RotatePoint(vector<float> &point, std::vector<std::vector<float> > &R);
+vector<float> InverseRotatePoint(vector<float> &point, std::vector<std::vector<float> > &R);
 
 struct MarkerPose
 {
@@ -31,7 +30,7 @@ class Calibration
 {
 public:
 	vector<float> worldT;
-	vector<vector<float>> worldR;
+	vector<vector<float> > worldR;
 	int iUsedMarkerId;
 
 	vector<MarkerPose> markerPoses;
@@ -49,9 +48,9 @@ private:
 	int nSampleCounter;
 	int nRequiredSamples;
 
-	vector<vector<Point3f>> marker3DSamples;
+	vector<vector<Point3f> > marker3DSamples;
 
-	void Procrustes(MarkerInfo &marker, vector<Point3f> &markerInWorld, vector<float> &markerT, vector<vector<float>> &markerR);
+	void Procrustes(MarkerInfo &marker, vector<Point3f> &markerInWorld, vector<float> &markerT, vector<vector<float> > &markerR);
 	bool GetMarkerCorners3D(vector<Point3f> &marker3D, MarkerInfo &marker, Point3f *pCameraCoordinates, int cColorWidth, int cColorHeight);
 };
 

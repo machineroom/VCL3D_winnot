@@ -12,9 +12,8 @@
 //        title={LiveScan3D: A Fast and Inexpensive 3D Data Acquisition System for Multiple Kinect v2 Sensors},
 //        year={2015},
 //    }
-#include "stdafx.h"
-#include "resource.h"
-#include "LiveScanClient.h"
+//#include "resource.h"
+#include "liveScanClient.h"
 #include "filter.h"
 #include <chrono>
 #include <strsafe.h>
@@ -23,16 +22,8 @@
 
 std::mutex m_mSocketThreadMutex;
 
-int APIENTRY wWinMain(    
-	_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR lpCmdLine,
-    _In_ int nShowCmd
-    )
+int main (int argc, char **argv)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
     LiveScanClient application;
     application.Run(hInstance, nShowCmd);
 }

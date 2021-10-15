@@ -15,8 +15,13 @@
 #pragma once
 
 #include "utils.h"
+#ifdef KINECT
 #include "Kinect.h"
+#endif
+#include <stdint.h>
+typedef uint16_t UINT16;
 
+#ifdef KINECT
 struct Body
 {
 	Body()
@@ -29,6 +34,11 @@ struct Body
 	std::vector<Joint> vJoints;
 	std::vector<Point2f> vJointsInColorSpace;
 };
+#else
+struct Body
+{
+};
+#endif
 
 class ICapture
 {

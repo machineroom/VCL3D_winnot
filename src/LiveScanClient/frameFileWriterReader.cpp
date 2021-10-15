@@ -46,7 +46,7 @@ void FrameFileWriterReader::openNewFileForWriting()
 	char filename[1024];
 	time_t t = time(0);
 	struct tm * now = localtime(&t);
-	sprintf(filename, "recording_%04d_%02d_%02d_%02d_%02d.bin", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+	sprintf(filename, "recording_%04d_%02d_%02d_%02d_%02d_%02d.bin", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
 	m_sFilename = filename; 
 	m_pFileHandle = fopen(filename, "wb");
 
@@ -66,7 +66,8 @@ bool FrameFileWriterReader::readFrame(std::vector<Point3s> &outPoints, std::vect
 	FILE *f = m_pFileHandle;
 	int nPoints, timestamp; 
 	char tmp[1024]; 
-	int nread = fscanf_s(f, "%s %d %s %d", tmp, 1024, &nPoints, tmp, 1024, &timestamp);
+	//TODO unsafe buffer overflow possibility blah blah
+	int nread = fscanf(f, "%s %d %s %d", tmp, &nPoints, tmp, &timestamp);
 
 	if (nread < 4)
 		return false;
