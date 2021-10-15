@@ -16,7 +16,6 @@
 #include "liveScanClient.h"
 #include "filter.h"
 #include <chrono>
-#include <strsafe.h>
 #include <fstream>
 #include "zstd.h"
 
@@ -25,24 +24,26 @@ std::mutex m_mSocketThreadMutex;
 int main (int argc, char **argv)
 {
     LiveScanClient application;
-    application.Run(hInstance, nShowCmd);
+    application.Run();
 }
 
 LiveScanClient::LiveScanClient() :
-    m_hWnd(NULL),
     m_nLastCounter(0),
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
     m_nNextStatusTime(0LL),
-    m_pD2DFactory(NULL),
-    m_pDrawColor(NULL),
+	// TODO port off Direct2D
+    //m_pD2DFactory(NULL),
+    //m_pDrawColor(NULL),
 	m_pDepthRGBX(NULL),
 	m_pCameraSpaceCoordinates(NULL),
 	m_pColorCoordinatesOfDepth(NULL),
 	m_pDepthCoordinatesOfColor(NULL),
 	m_bCalibrate(false),
 	m_bFilter(false),
+#ifdef KINECT
 	m_bStreamOnlyBodies(false),
+#endif
 	m_bCaptureFrame(false),
 	m_bConnected(false),
 	m_bConfirmCaptured(false),
@@ -55,13 +56,18 @@ LiveScanClient::LiveScanClient() :
 	m_nFilterNeighbors(10),
 	m_fFilterThreshold(0.01f)
 {
+	#ifdef KINECT
 	pCapture = new KinectCapture();
+	#else
+	pCapture = new FreenectCapture();
+	#endif
 
-    LARGE_INTEGER qpf = {0};
+    /*TODO port from windows
+	LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
     {
         m_fFreq = double(qpf.QuadPart);
-    }
+    }*/
 
 	m_vBounds.push_back(-0.5);
 	m_vBounds.push_back(-0.5);
@@ -76,11 +82,12 @@ LiveScanClient::LiveScanClient() :
 LiveScanClient::~LiveScanClient()
 {
     // clean up Direct2D renderer
-    if (m_pDrawColor)
+	// TODO port off Direct2D
+    /*if (m_pDrawColor)
     {
         delete m_pDrawColor;
         m_pDrawColor = NULL;
-    }
+    }*/
 
 	if (pCapture)
 	{
@@ -118,62 +125,21 @@ LiveScanClient::~LiveScanClient()
 		m_pClientSocket = NULL;
 	}
     // clean up Direct2D
-    SafeRelease(m_pD2DFactory);
+    //SafeRelease(m_pD2DFactory);
 }
 
-int LiveScanClient::Run(HINSTANCE hInstance, int nCmdShow)
+int LiveScanClient::Run()
 {
-    MSG       msg = {0};
-    WNDCLASS  wc;
-
-	// Dialog custom window class
-    ZeroMemory(&wc, sizeof(wc));
-    wc.style         = CS_HREDRAW | CS_VREDRAW;
-    wc.cbWndExtra    = DLGWINDOWEXTRA;
-    wc.hCursor       = LoadCursorW(NULL, IDC_ARROW);
-    wc.hIcon         = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_APP));
-    wc.lpfnWndProc   = DefDlgProcW;
-    wc.lpszClassName = L"LiveScanClientAppDlgWndClass";
-
-    if (!RegisterClassW(&wc))
-    {
-        return 0;
-    }
-
-    // Create main application window
-	HWND hWndApp = CreateDialogParamW(
-        NULL,
-        MAKEINTRESOURCE(IDD_APP),
-        NULL,
-        (DLGPROC)LiveScanClient::MessageRouter, 
-        reinterpret_cast<LPARAM>(this));
-
-    // Show window
-    ShowWindow(hWndApp, nCmdShow);
-
 	std::thread t1(&LiveScanClient::SocketThreadFunction, this);
     // Main message loop
-    while (WM_QUIT != msg.message)
+    while (true)
     {
 		//HandleSocket();
 		UpdateFrame();
-
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            // If a dialog message will be taken care of by the dialog proc
-            if (hWndApp && IsDialogMessageW(hWndApp, &msg))
-            {
-                continue;
-            }
-
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
     }
 
 	m_bSocketThread = false;
 	t1.join();
-    return static_cast<int>(msg.wParam);
 }
 
 
@@ -194,7 +160,11 @@ void LiveScanClient::UpdateFrame()
 	pCapture->MapDepthFrameToColorSpace(m_pColorCoordinatesOfDepth);
 	{
 		std::lock_guard<std::mutex> lock(m_mSocketThreadMutex);
+#ifdef KINECT
 		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
+#else
+		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX);
+#endif
 
 		if (m_bCaptureFrame)
 		{
@@ -229,135 +199,6 @@ void LiveScanClient::UpdateFrame()
 	ShowFPS();
 }
 
-LRESULT CALLBACK LiveScanClient::MessageRouter(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    LiveScanClient* pThis = NULL;
-    
-    if (WM_INITDIALOG == uMsg)
-    {
-        pThis = reinterpret_cast<LiveScanClient*>(lParam);
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
-    }
-    else
-    {
-        pThis = reinterpret_cast<LiveScanClient*>(::GetWindowLongPtr(hWnd, GWLP_USERDATA));
-    }
-
-    if (pThis)
-    {
-        return pThis->DlgProc(hWnd, uMsg, wParam, lParam);
-    }
-
-    return 0;
-}
-
-LRESULT CALLBACK LiveScanClient::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
-
-    switch (message)
-    {
-        case WM_INITDIALOG:
-        {
-            // Bind application window handle
-            m_hWnd = hWnd;
-
-            // Init Direct2D
-            D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pD2DFactory);
-
-            // Get and initialize the default Kinect sensor
-			bool res = pCapture->Initialize();
-			if (res)
-			{
-				m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
-
-				m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
-				m_pColorCoordinatesOfDepth = new Point2f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
-				m_pDepthCoordinatesOfColor = new Point2f[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
-			}
-			else
-			{
-				SetStatusMessage(L"Capture device failed to initialize!", 10000, true);
-			}
-
-			// Create and initialize a new Direct2D image renderer (take a look at ImageRenderer.h)
-			// We'll use this to draw the data we receive from the Kinect to the screen
-			HRESULT hr;
-			m_pDrawColor = new ImageRenderer();
-			hr = m_pDrawColor->Initialize(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), m_pD2DFactory, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, pCapture->nColorFrameWidth * sizeof(RGB));
-			if (FAILED(hr))
-			{
-				SetStatusMessage(L"Failed to initialize the Direct2D draw device.", 10000, true);
-			}
-
-			ReadIPFromFile();
-        }
-        break;
-
-        // If the titlebar X is clicked, destroy app
-		case WM_CLOSE:	
-			WriteIPToFile();
-			DestroyWindow(hWnd);						 
-			break;
-        case WM_DESTROY:
-            // Quit the main message pump
-            PostQuitMessage(0);
-            break;
-			
-        // Handle button press
-        case WM_COMMAND:
-			if (IDC_BUTTON_CONNECT == LOWORD(wParam) && BN_CLICKED == HIWORD(wParam))
-			{
-				std::lock_guard<std::mutex> lock(m_mSocketThreadMutex);
-				if (m_bConnected)
-				{
-					delete m_pClientSocket;
-					m_pClientSocket = NULL;
-
-					m_bConnected = false;
-					SetDlgItemTextA(m_hWnd, IDC_BUTTON_CONNECT, "Connect");
-				}
-				else
-				{
-					try
-					{
-						char address[20];
-						GetDlgItemTextA(m_hWnd, IDC_IP, address, 20);
-						m_pClientSocket = new SocketClient(address, 48001);
-
-						m_bConnected = true;
-						if (calibration.bCalibrated)
-							m_bConfirmCalibrated = true;
-
-						SetDlgItemTextA(m_hWnd, IDC_BUTTON_CONNECT, "Disconnect");
-						//Clear the status bar so that the "Failed to connect..." disappears.
-						SetStatusMessage(L"", 1, true);
-					}
-					catch (...)
-					{
-						SetStatusMessage(L"Failed to connect. Did you start the server?", 10000, true);
-					}
-				}
-			}
-			if (IDC_BUTTON_SWITCH == LOWORD(wParam) && BN_CLICKED == HIWORD(wParam))
-			{
-				m_bShowDepth = !m_bShowDepth;
-
-				if (m_bShowDepth)
-				{
-					SetDlgItemTextA(m_hWnd, IDC_BUTTON_SWITCH, "Show color");
-				}
-				else
-				{
-					SetDlgItemTextA(m_hWnd, IDC_BUTTON_SWITCH, "Show depth");
-				}
-			}
-            break;
-    }
-
-    return FALSE;
-}
 
 void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight)
 {
@@ -387,7 +228,8 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight
 		}
 
 		// Draw the data with Direct2D
-		m_pDrawColor->Draw(reinterpret_cast<BYTE*>(m_pDepthRGBX), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
+		// TODO port off Direct2D
+		//m_pDrawColor->Draw(reinterpret_cast<BYTE*>(m_pDepthRGBX), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
 	}
 }
 
@@ -397,10 +239,12 @@ void LiveScanClient::ProcessColor(RGB* pBuffer, int nWidth, int nHeight)
 	if (pBuffer && (nWidth == pCapture->nColorFrameWidth) && (nHeight == pCapture->nColorFrameHeight))
     {
         // Draw the data with Direct2D
-		m_pDrawColor->Draw(reinterpret_cast<BYTE*>(pBuffer), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
+		// TODO port off Direct2D
+		//m_pDrawColor->Draw(reinterpret_cast<BYTE*>(pBuffer), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
     }
 }
 
+	/* TODO port from windows
 bool LiveScanClient::SetStatusMessage(_In_z_ WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce)
 {
     INT64 now = GetTickCount64();
@@ -415,6 +259,7 @@ bool LiveScanClient::SetStatusMessage(_In_z_ WCHAR* szMessage, DWORD nShowTimeMs
 
     return false;
 }
+*/
 
 void LiveScanClient::SocketThreadFunction()
 {
@@ -523,7 +368,11 @@ void LiveScanClient::HandleSocket()
 				int size = -1;
 				m_pClientSocket->SendBytes((char*)&size, 4);
 			} else
+#ifdef KINECT
 				SendFrame(points, colors, m_vLastFrameBody);
+#else
+				SendFrame(points, colors);
+#endif
 		}
 		//send last frame
 		else if (received[i] == MSG_REQUEST_LAST_FRAME)
@@ -531,7 +380,11 @@ void LiveScanClient::HandleSocket()
 			byteToSend = MSG_LAST_FRAME;
 			m_pClientSocket->SendBytes(&byteToSend, 1);
 
+#ifdef KINECT
 			SendFrame(m_vLastFrameVertices, m_vLastFrameRGB, m_vLastFrameBody);
+#else
+			SendFrame(m_vLastFrameVertices, m_vLastFrameRGB);
+#endif
 		}
 		//receive calibration data
 		else if (received[i] == MSG_RECEIVE_CALIBRATION)
@@ -590,7 +443,11 @@ void LiveScanClient::HandleSocket()
 	}
 }
 
+#ifdef KINECT
 void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector<Body> body)
+#else
+void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
+#endif
 {
 	int size = RGB.size() * (3 + 3 * sizeof(short)) + sizeof(int);
 
@@ -613,6 +470,7 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector
 		pos += sizeof(short) * 3;
 	}
 	
+#ifdef KINECT
 	int nBodies = body.size();
 	size += sizeof(nBodies);
 	for (int i = 0; i < nBodies; i++)
@@ -659,6 +517,7 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector
 			pos += sizeof(float);
 		}
 	}
+#endif // KINECT
 
 	int iCompression = static_cast<int>(m_bFrameCompression);
 
@@ -680,7 +539,11 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector
 	m_pClientSocket->SendBytes(buffer.data(), size);
 }
 
+#ifdef KINECT
 void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color, vector<Body> &bodies, BYTE* bodyIndex)
+#else
+void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
+#endif
 {
 	std::vector<Point3f> goodVertices;
 	std::vector<RGB> goodColorPoints;
@@ -689,9 +552,10 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color,
 
 	for (unsigned int vertexIndex = 0; vertexIndex < nVertices; vertexIndex++)
 	{
+#ifdef KINECT
 		if (m_bStreamOnlyBodies && bodyIndex[vertexIndex] >= bodies.size())
 			continue;
-
+#endif
 		if (vertices[vertexIndex].Z >= 0 && mapping[vertexIndex].Y >= 0 && mapping[vertexIndex].Y < pCapture->nColorFrameHeight)
 		{
 			Point3f temp = vertices[vertexIndex];
@@ -714,6 +578,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color,
 		}
 	}
 
+#ifdef KINECT
 	vector<Body> tempBodies = bodies;
 
 	for (unsigned int i = 0; i < tempBodies.size(); i++)
@@ -736,6 +601,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color,
 			}
 		}
 	}
+#endif //KINECT
 
 	if (m_bFilter)
 		filter(goodVertices, goodColorPoints, m_nFilterNeighbors, m_fFilterThreshold);
@@ -747,13 +613,16 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color,
 		goodVerticesShort[i] = goodVertices[i];
 	}
 
+#ifdef KINECT
 	m_vLastFrameBody = tempBodies;
+#endif
 	m_vLastFrameVertices = goodVerticesShort;
 	m_vLastFrameRGB = goodColorPoints;
 }
 
 void LiveScanClient::ShowFPS()
 {
+	/* TODO port from windows
 	if (m_hWnd)
 	{
 		double fps = 0.0;
@@ -779,28 +648,6 @@ void LiveScanClient::ShowFPS()
 			m_nLastCounter = qpcNow.QuadPart;
 			m_nFramesSinceUpdate = 0;
 		}
-	}
+	}*/
 }
 
-void LiveScanClient::ReadIPFromFile()
-{
-	ifstream file;
-	file.open("lastIP.txt");
-	if (file.is_open())
-	{
-		char lastUsedIPAddress[20];
-		file.getline(lastUsedIPAddress, 20);
-		file.close();
-		SetDlgItemTextA(m_hWnd, IDC_IP, lastUsedIPAddress);
-	}
-}
-
-void LiveScanClient::WriteIPToFile()
-{
-	ofstream file;
-	file.open("lastIP.txt");
-	char lastUsedIPAddress[20];
-	GetDlgItemTextA(m_hWnd, IDC_IP, lastUsedIPAddress, 20);
-	file << lastUsedIPAddress;
-	file.close();
-}

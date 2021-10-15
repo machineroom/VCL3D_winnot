@@ -29,6 +29,14 @@
 #include <thread>
 #include <mutex>
 
+#include <stdint.h>
+typedef uint32_t DWORD;
+typedef int64_t INT64;
+typedef char WCHAR;
+typedef uint16_t USHORT;
+#define _In_z_
+
+
 class LiveScanClient
 {
 public:
@@ -36,9 +44,7 @@ public:
     ~LiveScanClient();
 
 
-    static LRESULT CALLBACK MessageRouter(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    LRESULT CALLBACK        DlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    int                     Run(HINSTANCE hInstance, int nCmdShow);
+    int                     Run();
 
 	bool m_bSocketThread;
 private:
@@ -69,9 +75,10 @@ private:
 
 	std::vector<Point3s> m_vLastFrameVertices;
 	std::vector<RGB> m_vLastFrameRGB;
+#ifdef KINECT
 	std::vector<Body> m_vLastFrameBody;
+#endif
 
-	HWND m_hWnd;
     INT64 m_nLastCounter;
     double m_fFreq;
     INT64 m_nNextStatusTime;
@@ -81,24 +88,31 @@ private:
 	Point2f* m_pColorCoordinatesOfDepth;
 	Point2f* m_pDepthCoordinatesOfColor;
 
-    // Direct2D
-    ImageRenderer* m_pDrawColor;
-    ID2D1Factory* m_pD2DFactory;
+    // TODO port off Direct2D
+    //ImageRenderer* m_pDrawColor;
+    //ID2D1Factory* m_pD2DFactory;
 	RGB* m_pDepthRGBX;
 
 	void UpdateFrame();
     void ProcessColor(RGB* pBuffer, int nWidth, int nHeight);
 	void ProcessDepth(const UINT16* pBuffer, int nHeight, int nWidth);
 
-    bool SetStatusMessage(_In_z_ WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
+    bool SetStatusMessage(WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
 
 	void HandleSocket();
+#ifdef KINECT
 	void SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector<Body> body);
+#else
+	void SendFrame(vector<Point3s> vertices, vector<RGB> RGB);
+#endif
 
 	void SocketThreadFunction();
+
+#ifdef KINECT
 	void StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color, vector<Body> &bodies, BYTE* bodyIndex);
+#else
+	void StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color);
+#endif
 	void ShowFPS();
-	void ReadIPFromFile();
-	void WriteIPToFile();
 };
 
