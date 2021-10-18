@@ -1,3 +1,5 @@
+James Wilson mucking about with port to Mac/Linux, i.e. anything not windows
+
 # LiveScan3D #
 LiveScan3D is a system designed for real time 3D reconstruction using multiple AzureKinect or Kinect v2 depth sensors simultaneously at real time speed. The code for working with Kinect v2 is in the master branch, and the v1.x.x releases. If you want to work with Azure Kinect please use the appropriately named branch.
 
