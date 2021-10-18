@@ -353,7 +353,7 @@ cv::Point2f MarkerDetector::GetIntersection(cv::Vec4f lin1, cv::Vec4f lin2)
 	b.at<float>(0, 0) = c1;
 	b.at<float>(1, 0) = c2;
 
-	//rozwi¹zuje uk³ad równañ
+	//rozwiï¿½zuje ukï¿½ad rï¿½wnaï¿½
 	cv::solve(A, b, dst);
 
 	cv::Point2f res(dst.at<float>(0, 0) * lin1[0] + lin1[2], dst.at<float>(0, 0) * lin1[1] + lin1[3]);

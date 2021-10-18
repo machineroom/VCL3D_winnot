@@ -17,7 +17,6 @@ include_directories(${OPENCV_INCLUDE_DIRS})
 include_directories(${ZSTD_INCLUDE_DIRS})
 include_directories(${NANOFLANN_INCLUDE_DIRS})
 include_directories(${FREENECT_INCLUDE_DIRS})
-#include_directories(/usr/local/include)
 
 link_directories(${OPENCV_LIBRARY_DIRS})
 
