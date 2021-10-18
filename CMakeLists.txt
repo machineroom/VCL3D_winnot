@@ -6,9 +6,9 @@ find_package(PkgConfig)
 # set the project name
 project(LiveScanClient)
 
-pkg_check_modules(OPENCV REQUIRED opencv)
+pkg_check_modules(OPENCV REQUIRED opencv4)
 pkg_check_modules(ZSTD REQUIRED libzstd)
-pkg_check_modules(NANOFLANN REQUIRED nanoflann)
+#pkg_check_modules(NANOFLANN REQUIRED nanoflann)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/LiveScanClient)
@@ -32,4 +32,4 @@ add_executable(client ${SOURCES})
 
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
-target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${NANOFLANN_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES})
+target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} {FREENECT_LINK_LIBRARIES})
