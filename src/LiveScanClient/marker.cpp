@@ -36,13 +36,13 @@ bool MarkerDetector::GetMarker(cv::Mat &img, MarkerInfo &marker)
 {
 	vector<MarkerInfo> markers;
 	cv::Mat img2, img3;
-	cv::cvtColor(img, img2, CV_BGR2GRAY);
-	cv::threshold(img2, img2, nThreshold, 255, CV_THRESH_BINARY);
+	cv::cvtColor(img, img2, cv::COLOR_BGR2GRAY);
+	cv::threshold(img2, img2, nThreshold, 255, cv::THRESH_BINARY);
 
 	img2.copyTo(img3);
 
 	vector<vector<cv::Point>> contours;	
-	cv::findContours(img3, contours, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE);
+	cv::findContours(img3, contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
 
 	for (unsigned int i = 0; i < contours.size(); i++)
 	{
@@ -323,7 +323,7 @@ void MarkerDetector::CornersSubPix(vector<cv::Point2f> &corners, vector<cv::Poin
 	
 	for (unsigned int i = 0; i < corners.size(); i++)
 	{
-		cv::fitLine(pts[i], lines[i], CV_DIST_L2, 0, 0.01, 0.01);
+		cv::fitLine(pts[i], lines[i], cv::DIST_L2, 0, 0.01, 0.01);
 	}
 
 	vector<cv::Point2f> corners2;
