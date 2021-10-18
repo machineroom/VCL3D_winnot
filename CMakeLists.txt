@@ -20,4 +20,5 @@ list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/socketCS.cpp)
 add_executable(client ${SOURCES})
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
+target_link_libraries (client opencv2)
 
