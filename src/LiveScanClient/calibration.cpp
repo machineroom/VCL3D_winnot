@@ -14,7 +14,7 @@
 //    }
 
 #include "calibration.h"
-#include "opencv/cv.h"
+#include <opencv2/core.hpp>
 
 #include <fstream>
 

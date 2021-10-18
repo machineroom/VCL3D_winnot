@@ -3,7 +3,7 @@
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
  * Copyright 2008-2009  David G. Lowe (lowe@cs.ubc.ca). All rights reserved.
- * Copyright 2011-2021  Jose Luis Blanco (joseluisblancoc@gmail.com).
+ * Copyright 2011-2016  Jose Luis Blanco (joseluisblancoc@gmail.com).
  *   All rights reserved.
  *
  * THE BSD LICENSE
@@ -51,11 +51,10 @@
 #include <array>
 #include <cassert>
 #include <cmath>   // for abs()
+#include <cstdio>  // for fwrite()
 #include <cstdlib> // for abs()
 #include <functional>
-#include <istream>
 #include <limits> // std::reference_wrapper
-#include <ostream>
 #include <stdexcept>
 #include <vector>
 
@@ -277,28 +276,36 @@ public:
 /** @addtogroup loadsave_grp Load/save auxiliary functions
  * @{ */
 template <typename T>
-void save_value(std::ostream &stream, const T &value) {
-  stream.write(reinterpret_cast<const char*>(&value), sizeof(T));
+void save_value(FILE *stream, const T &value, size_t count = 1) {
+  fwrite(&value, sizeof(value), count, stream);
 }
 
 template <typename T>
-void save_value(std::ostream& stream, const std::vector<T> &value) {
+void save_value(FILE *stream, const std::vector<T> &value) {
   size_t size = value.size();
-  stream.write(reinterpret_cast<const char*>(&size), sizeof(size_t));
-  stream.write(reinterpret_cast<const char*>(value.data()), sizeof(T) * size);
+  fwrite(&size, sizeof(size_t), 1, stream);
+  fwrite(&value[0], sizeof(T), size, stream);
 }
 
 template <typename T>
-void load_value(std::istream& stream, T &value) {
-  stream.read(reinterpret_cast<char*>(&value), sizeof(T));
+void load_value(FILE *stream, T &value, size_t count = 1) {
+  size_t read_cnt = fread(&value, sizeof(value), count, stream);
+  if (read_cnt != count) {
+    throw std::runtime_error("Cannot read from file");
+  }
 }
 
-template <typename T>
-void load_value(std::istream &stream, std::vector<T> &value) {
+template <typename T> void load_value(FILE *stream, std::vector<T> &value) {
   size_t size;
-  stream.read(reinterpret_cast<char*>(&size), sizeof(size_t));
+  size_t read_cnt = fread(&size, sizeof(size_t), 1, stream);
+  if (read_cnt != 1) {
+    throw std::runtime_error("Cannot read from file");
+  }
   value.resize(size);
-  stream.read(reinterpret_cast<char*>(value.data()), sizeof(T) * size);
+  read_cnt = fread(&value[0], sizeof(T), size, stream);
+  if (read_cnt != size) {
+    throw std::runtime_error("Cannot read from file");
+  }
 }
 /** @} */
 
@@ -309,16 +316,11 @@ struct Metric {};
 
 /** Manhattan distance functor (generic version, optimized for
  * high-dimensionality data sets). Corresponding distance traits:
- * nanoflann::metric_L1
- *
- * \tparam T Type of the elements (e.g. double, float, uint8_t)
- * \tparam DataSource Source of the data, i.e. where the vectors are stored
- * \tparam _DistanceType Type of distance variables (must be signed)
- * \tparam AccessorType Type of the arguments with which the data can be accessed
- * (e.g. float, double, int64_t, T*)
+ * nanoflann::metric_L1 \tparam T Type of the elements (e.g. double, float,
+ * uint8_t) \tparam _DistanceType Type of distance variables (must be signed)
+ * (e.g. float, double, int64_t)
  */
-template <class T, class DataSource, typename _DistanceType = T,
-          typename AccessorType = uint32_t>
+template <class T, class DataSource, typename _DistanceType = T>
 struct L1_Adaptor {
   typedef T ElementType;
   typedef _DistanceType DistanceType;
@@ -327,8 +329,7 @@ struct L1_Adaptor {
 
   L1_Adaptor(const DataSource &_data_source) : data_source(_data_source) {}
 
-  inline DistanceType evalMetric(const T *a, const AccessorType b_idx,
-                                 size_t size,
+  inline DistanceType evalMetric(const T *a, const size_t b_idx, size_t size,
                                  DistanceType worst_dist = -1) const {
     DistanceType result = DistanceType();
     const T *last = a + size;
@@ -366,16 +367,11 @@ struct L1_Adaptor {
 
 /** Squared Euclidean distance functor (generic version, optimized for
  * high-dimensionality data sets). Corresponding distance traits:
- * nanoflann::metric_L2
- *
- * \tparam T Type of the elements (e.g. double, float, uint8_t)
- * \tparam DataSource Source of the data, i.e. where the vectors are stored
- * \tparam _DistanceType Type of distance variables (must be signed)
- * \tparam AccessorType Type of the arguments with which the data can be accessed
- * (e.g. float, double, int64_t, T*)
+ * nanoflann::metric_L2 \tparam T Type of the elements (e.g. double, float,
+ * uint8_t) \tparam _DistanceType Type of distance variables (must be signed)
+ * (e.g. float, double, int64_t)
  */
-template <class T, class DataSource, typename _DistanceType = T,
-          typename AccessorType = uint32_t>
+template <class T, class DataSource, typename _DistanceType = T>
 struct L2_Adaptor {
   typedef T ElementType;
   typedef _DistanceType DistanceType;
@@ -384,8 +380,7 @@ struct L2_Adaptor {
 
   L2_Adaptor(const DataSource &_data_source) : data_source(_data_source) {}
 
-  inline DistanceType evalMetric(const T *a, const AccessorType b_idx,
-                                 size_t size,
+  inline DistanceType evalMetric(const T *a, const size_t b_idx, size_t size,
                                  DistanceType worst_dist = -1) const {
     DistanceType result = DistanceType();
     const T *last = a + size;
@@ -420,16 +415,11 @@ struct L2_Adaptor {
 
 /** Squared Euclidean (L2) distance functor (suitable for low-dimensionality
  * datasets, like 2D or 3D point clouds) Corresponding distance traits:
- * nanoflann::metric_L2_Simple
- *
- * \tparam T Type of the elements (e.g. double, float, uint8_t)
- * \tparam DataSource Source of the data, i.e. where the vectors are stored
- * \tparam _DistanceType Type of distance variables (must be signed)
- * \tparam AccessorType Type of the arguments with which the data can be accessed
- * (e.g. float, double, int64_t, T*)
+ * nanoflann::metric_L2_Simple \tparam T Type of the elements (e.g. double,
+ * float, uint8_t) \tparam _DistanceType Type of distance variables (must be
+ * signed) (e.g. float, double, int64_t)
  */
-template <class T, class DataSource, typename _DistanceType = T,
-          typename AccessorType = uint32_t>
+template <class T, class DataSource, typename _DistanceType = T>
 struct L2_Simple_Adaptor {
   typedef T ElementType;
   typedef _DistanceType DistanceType;
@@ -439,7 +429,7 @@ struct L2_Simple_Adaptor {
   L2_Simple_Adaptor(const DataSource &_data_source)
       : data_source(_data_source) {}
 
-  inline DistanceType evalMetric(const T *a, const AccessorType b_idx,
+  inline DistanceType evalMetric(const T *a, const size_t b_idx,
                                  size_t size) const {
     DistanceType result = DistanceType();
     for (size_t i = 0; i < size; ++i) {
@@ -457,16 +447,11 @@ struct L2_Simple_Adaptor {
 
 /** SO2 distance functor
  *  Corresponding distance traits: nanoflann::metric_SO2
- *
- * \tparam T Type of the elements (e.g. double, float, uint8_t)
- * \tparam DataSource Source of the data, i.e. where the vectors are stored
+ * \tparam T Type of the elements (e.g. double, float)
  * \tparam _DistanceType Type of distance variables (must be signed) (e.g.
  * float, double) orientation is constrained to be in [-pi, pi]
- * \tparam AccessorType Type of the arguments with which the data can be accessed
- * (e.g. float, double, int64_t, T*)
  */
-template <class T, class DataSource, typename _DistanceType = T,
-          typename AccessorType = uint32_t>
+template <class T, class DataSource, typename _DistanceType = T>
 struct SO2_Adaptor {
   typedef T ElementType;
   typedef _DistanceType DistanceType;
@@ -475,7 +460,7 @@ struct SO2_Adaptor {
 
   SO2_Adaptor(const DataSource &_data_source) : data_source(_data_source) {}
 
-  inline DistanceType evalMetric(const T *a, const AccessorType b_idx,
+  inline DistanceType evalMetric(const T *a, const size_t b_idx,
                                  size_t size) const {
     return accum_dist(a[size - 1], data_source.kdtree_get_pt(b_idx, size - 1),
                       size - 1);
@@ -497,26 +482,21 @@ struct SO2_Adaptor {
 
 /** SO3 distance functor (Uses L2_Simple)
  *  Corresponding distance traits: nanoflann::metric_SO3
- *
- * \tparam T Type of the elements (e.g. double, float, uint8_t)
- * \tparam DataSource Source of the data, i.e. where the vectors are stored
+ * \tparam T Type of the elements (e.g. double, float)
  * \tparam _DistanceType Type of distance variables (must be signed) (e.g.
  * float, double)
- * \tparam AccessorType Type of the arguments with which the data can be accessed
- * (e.g. float, double, int64_t, T*)
  */
-template <class T, class DataSource, typename _DistanceType = T,
-          typename AccessorType = uint32_t>
+template <class T, class DataSource, typename _DistanceType = T>
 struct SO3_Adaptor {
   typedef T ElementType;
   typedef _DistanceType DistanceType;
 
-  L2_Simple_Adaptor<T, DataSource, DistanceType, AccessorType> distance_L2_Simple;
+  L2_Simple_Adaptor<T, DataSource> distance_L2_Simple;
 
   SO3_Adaptor(const DataSource &_data_source)
       : distance_L2_Simple(_data_source) {}
 
-  inline DistanceType evalMetric(const T *a, const AccessorType b_idx,
+  inline DistanceType evalMetric(const T *a, const size_t b_idx,
                                  size_t size) const {
     return distance_L2_Simple.evalMetric(a, b_idx, size);
   }
@@ -529,32 +509,32 @@ struct SO3_Adaptor {
 
 /** Metaprogramming helper traits class for the L1 (Manhattan) metric */
 struct metric_L1 : public Metric {
-  template <class T, class DataSource, typename AccessorType = uint32_t> struct traits {
-    typedef L1_Adaptor<T, DataSource, T, AccessorType> distance_t;
+  template <class T, class DataSource> struct traits {
+    typedef L1_Adaptor<T, DataSource> distance_t;
   };
 };
 /** Metaprogramming helper traits class for the L2 (Euclidean) metric */
 struct metric_L2 : public Metric {
-  template <class T, class DataSource, typename AccessorType = uint32_t> struct traits {
-    typedef L2_Adaptor<T, DataSource, T, AccessorType> distance_t;
+  template <class T, class DataSource> struct traits {
+    typedef L2_Adaptor<T, DataSource> distance_t;
   };
 };
 /** Metaprogramming helper traits class for the L2_simple (Euclidean) metric */
 struct metric_L2_Simple : public Metric {
-  template <class T, class DataSource, typename AccessorType = uint32_t> struct traits {
-    typedef L2_Simple_Adaptor<T, DataSource, T, AccessorType> distance_t;
+  template <class T, class DataSource> struct traits {
+    typedef L2_Simple_Adaptor<T, DataSource> distance_t;
   };
 };
 /** Metaprogramming helper traits class for the SO3_InnerProdQuat metric */
 struct metric_SO2 : public Metric {
-  template <class T, class DataSource, typename AccessorType = uint32_t> struct traits {
-    typedef SO2_Adaptor<T, DataSource, T, AccessorType> distance_t;
+  template <class T, class DataSource> struct traits {
+    typedef SO2_Adaptor<T, DataSource> distance_t;
   };
 };
 /** Metaprogramming helper traits class for the SO3_InnerProdQuat metric */
 struct metric_SO3 : public Metric {
-  template <class T, class DataSource, typename AccessorType = uint32_t> struct traits {
-    typedef SO3_Adaptor<T, DataSource, T, AccessorType> distance_t;
+  template <class T, class DataSource> struct traits {
+    typedef SO3_Adaptor<T, DataSource> distance_t;
   };
 };
 
@@ -626,24 +606,20 @@ class PooledAllocator {
   /* Minimum number of bytes requested at a time from	the system.  Must be
    * multiple of WORDSIZE. */
 
-  using Offset    = uint32_t;
-  using Size      = uint32_t;
-  using Dimension = int32_t;
-
-  Size remaining; /* Number of bytes left in current block of storage. */
+  size_t remaining; /* Number of bytes left in current block of storage. */
   void *base;       /* Pointer to base of current block of storage. */
   void *loc;        /* Current location in block to next allocate memory. */
 
   void internal_init() {
     remaining = 0;
-    base = nullptr;
+    base = NULL;
     usedMemory = 0;
     wastedMemory = 0;
   }
 
 public:
-  Size usedMemory;
-  Size wastedMemory;
+  size_t usedMemory;
+  size_t wastedMemory;
 
   /**
       Default constructor. Initializes a new pool.
@@ -657,7 +633,7 @@ public:
 
   /** Frees all allocated memory chunks */
   void free_all() {
-    while (base != nullptr) {
+    while (base != NULL) {
       void *prev =
           *(static_cast<void **>(base)); /* Get pointer to prev block. */
       ::free(base);
@@ -675,7 +651,7 @@ public:
         only works for WORDSIZE that is a power of 2, by masking last bits of
         incremented size to zero.
      */
-    const Size size = (req_size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
+    const size_t size = (req_size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
 
     /* Check whether a new block must be allocated.  Note that the first word
         of a block is reserved for a pointer to the previous block.
@@ -685,7 +661,7 @@ public:
       wastedMemory += remaining;
 
       /* Allocate new storage. */
-      const Size blocksize =
+      const size_t blocksize =
           (size + sizeof(void *) + (WORDSIZE - 1) > BLOCKSIZE)
               ? size + sizeof(void *) + (WORDSIZE - 1)
               : BLOCKSIZE;
@@ -701,7 +677,7 @@ public:
       static_cast<void **>(m)[0] = base;
       base = m;
 
-      Size shift = 0;
+      size_t shift = 0;
       // int size_t = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) &
       // (WORDSIZE-1))) & (WORDSIZE-1);
 
@@ -737,7 +713,7 @@ public:
 /** Used to declare fixed-size arrays when DIM>0, dynamically-allocated vectors
  * when DIM=-1. Fixed size version for a generic DIM:
  */
-template <int32_t DIM, typename T> struct array_or_vector_selector {
+template <int DIM, typename T> struct array_or_vector_selector {
   typedef std::array<T, DIM> container_t;
 };
 /** Dynamic size version */
@@ -756,11 +732,11 @@ template <typename T> struct array_or_vector_selector<-1, T> {
  * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
  * \tparam Distance The distance metric to use, these are all classes derived
  * from nanoflann::Metric \tparam DIM Dimensionality of data points (e.g. 3 for
- * 3D points) \tparam AccessorType Will be typically size_t or int
+ * 3D points) \tparam IndexType Will be typically size_t or int
  */
 
-template <class Derived, typename Distance, class DatasetAdaptor, int32_t DIM = -1,
-          typename AccessorType = uint32_t>
+template <class Derived, typename Distance, class DatasetAdaptor, int DIM = -1,
+          typename IndexType = size_t>
 class KDTreeBaseClass {
 
 public:
@@ -775,26 +751,17 @@ public:
   typedef typename Distance::ElementType ElementType;
   typedef typename Distance::DistanceType DistanceType;
 
-  /**
-   *  Array of indices to vectors in the dataset.
-   */
-  std::vector<AccessorType> vAcc;
-
-  using Offset    = typename decltype(vAcc)::size_type;
-  using Size      = typename decltype(vAcc)::size_type;
-  using Dimension = int32_t;
-
   /*--------------------- Internal Data Structures --------------------------*/
   struct Node {
     /** Union used because a node can be either a LEAF node or a non-leaf node,
      * so both data fields are never used simultaneously */
     union {
       struct leaf {
-        Offset left, right;            //!< Indices of points in leaf node
+        IndexType left, right; //!< Indices of points in leaf node
       } lr;
       struct nonleaf {
-        Dimension divfeat;             //!< Dimension used for subdivision.
-        DistanceType divlow, divhigh;  //!< The values used for subdivision.
+        int divfeat;                  //!< Dimension used for subdivision.
+        DistanceType divlow, divhigh; //!< The values used for subdivision.
       } sub;
     } node_type;
     Node *child1, *child2; //!< Child nodes (both=NULL mean its a leaf node)
@@ -806,14 +773,19 @@ public:
     ElementType low, high;
   };
 
+  /**
+   *  Array of indices to vectors in the dataset.
+   */
+  std::vector<IndexType> vind;
+
   NodePtr root_node;
 
-  Size m_leaf_max_size;
+  size_t m_leaf_max_size;
 
-  Size m_size;                  //!< Number of current points in the dataset
-  Size m_size_at_index_build;   //!< Number of points in the dataset when the
+  size_t m_size;                //!< Number of current points in the dataset
+  size_t m_size_at_index_build; //!< Number of points in the dataset when the
                                 //!< index was built
-  Dimension dim;                //!< Dimensionality of each data point
+  int dim;                      //!< Dimensionality of each data point
 
   /** Define "BoundingBox" as a fixed-size or variable-size container depending
    * on "DIM" */
@@ -839,36 +811,36 @@ public:
   PooledAllocator pool;
 
   /** Returns number of points in dataset  */
-  Size size(const Derived &obj) const { return obj.m_size; }
+  size_t size(const Derived &obj) const { return obj.m_size; }
 
   /** Returns the length of each point in the dataset */
-  Size veclen(const Derived &obj) {
-    return DIM > 0 ? DIM : obj.dim;
+  size_t veclen(const Derived &obj) {
+    return static_cast<size_t>(DIM > 0 ? DIM : obj.dim);
   }
 
   /// Helper accessor to the dataset points:
-  inline ElementType dataset_get(const Derived &obj, AccessorType element,
-                                 Dimension component) const {
-    return obj.dataset.kdtree_get_pt(element, component);
+  inline ElementType dataset_get(const Derived &obj, size_t idx,
+                                 int component) const {
+    return obj.dataset.kdtree_get_pt(idx, component);
   }
 
   /**
    * Computes the inde memory usage
    * Returns: memory used by the index
    */
-  Size usedMemory(Derived &obj) {
+  size_t usedMemory(Derived &obj) {
     return obj.pool.usedMemory + obj.pool.wastedMemory +
            obj.dataset.kdtree_get_point_count() *
-               sizeof(AccessorType); // pool memory and vind array memory
+               sizeof(IndexType); // pool memory and vind array memory
   }
 
-  void computeMinMax(const Derived &obj, Offset ind, Size count,
-                     Dimension element, ElementType &min_elem,
+  void computeMinMax(const Derived &obj, IndexType *ind, IndexType count,
+                     int element, ElementType &min_elem,
                      ElementType &max_elem) {
-    min_elem = dataset_get(obj, vAcc[ind], element);
-    max_elem = min_elem;
-    for (Offset i = 1; i < count; ++i) {
-      ElementType val = dataset_get(obj, vAcc[ind + i], element);
+    min_elem = dataset_get(obj, ind[0], element);
+    max_elem = dataset_get(obj, ind[0], element);
+    for (IndexType i = 1; i < count; ++i) {
+      ElementType val = dataset_get(obj, ind[i], element);
       if (val < min_elem)
         min_elem = val;
       if (val > max_elem)
@@ -883,34 +855,35 @@ public:
    * @param left index of the first vector
    * @param right index of the last vector
    */
-  NodePtr divideTree(Derived &obj, const Offset left, const Offset right,
+  NodePtr divideTree(Derived &obj, const IndexType left, const IndexType right,
                      BoundingBox &bbox) {
     NodePtr node = obj.pool.template allocate<Node>(); // allocate memory
 
     /* If too few exemplars remain, then make this a leaf node. */
-    if ((right - left) <= static_cast<Offset>(obj.m_leaf_max_size)) {
+    if ((right - left) <= static_cast<IndexType>(obj.m_leaf_max_size)) {
       node->child1 = node->child2 = NULL; /* Mark as leaf node. */
       node->node_type.lr.left = left;
       node->node_type.lr.right = right;
 
       // compute bounding-box of leaf points
-      for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
-        bbox[i].low = dataset_get(obj, obj.vAcc[left], i);
-        bbox[i].high = dataset_get(obj, obj.vAcc[left], i);
+      for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+        bbox[i].low = dataset_get(obj, obj.vind[left], i);
+        bbox[i].high = dataset_get(obj, obj.vind[left], i);
       }
-      for (Offset k = left + 1; k < right; ++k) {
-        for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
-          if (bbox[i].low > dataset_get(obj, obj.vAcc[k], i))
-            bbox[i].low = dataset_get(obj, obj.vAcc[k], i);
-          if (bbox[i].high < dataset_get(obj, obj.vAcc[k], i))
-            bbox[i].high = dataset_get(obj, obj.vAcc[k], i);
+      for (IndexType k = left + 1; k < right; ++k) {
+        for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+          if (bbox[i].low > dataset_get(obj, obj.vind[k], i))
+            bbox[i].low = dataset_get(obj, obj.vind[k], i);
+          if (bbox[i].high < dataset_get(obj, obj.vind[k], i))
+            bbox[i].high = dataset_get(obj, obj.vind[k], i);
         }
       }
     } else {
-      Offset idx;
-      Dimension cutfeat;
+      IndexType idx;
+      int cutfeat;
       DistanceType cutval;
-      middleSplit_(obj, left, right - left, idx, cutfeat, cutval, bbox);
+      middleSplit_(obj, &obj.vind[0] + left, right - left, idx, cutfeat, cutval,
+                   bbox);
 
       node->node_type.sub.divfeat = cutfeat;
 
@@ -925,7 +898,7 @@ public:
       node->node_type.sub.divlow = left_bbox[cutfeat].high;
       node->node_type.sub.divhigh = right_bbox[cutfeat].low;
 
-      for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+      for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
         bbox[i].low = std::min(left_bbox[i].low, right_bbox[i].low);
         bbox[i].high = std::max(left_bbox[i].high, right_bbox[i].high);
       }
@@ -934,12 +907,12 @@ public:
     return node;
   }
 
-  void middleSplit_(Derived &obj, Offset ind, Size count, Offset &index,
-                    Dimension &cutfeat, DistanceType &cutval,
+  void middleSplit_(Derived &obj, IndexType *ind, IndexType count,
+                    IndexType &index, int &cutfeat, DistanceType &cutval,
                     const BoundingBox &bbox) {
-    const auto EPS = static_cast<DistanceType>(0.00001);
+    const DistanceType EPS = static_cast<DistanceType>(0.00001);
     ElementType max_span = bbox[0].high - bbox[0].low;
-    for (Dimension i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+    for (int i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       ElementType span = bbox[i].high - bbox[i].low;
       if (span > max_span) {
         max_span = span;
@@ -947,12 +920,13 @@ public:
     }
     ElementType max_spread = -1;
     cutfeat = 0;
-    for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+    for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       ElementType span = bbox[i].high - bbox[i].low;
       if (span > (1 - EPS) * max_span) {
         ElementType min_elem, max_elem;
         computeMinMax(obj, ind, count, i, min_elem, max_elem);
         ElementType spread = max_elem - min_elem;
+        ;
         if (spread > max_spread) {
           cutfeat = i;
           max_spread = spread;
@@ -971,7 +945,7 @@ public:
     else
       cutval = split_val;
 
-    Offset lim1, lim2;
+    IndexType lim1, lim2;
     planeSplit(obj, ind, count, cutfeat, cutval, lim1, lim2);
 
     if (lim1 > count / 2)
@@ -991,21 +965,21 @@ public:
    *  dataset[ind[lim1..lim2-1]][cutfeat]==cutval
    *  dataset[ind[lim2..count]][cutfeat]>cutval
    */
-  void planeSplit(Derived &obj, Offset ind, const Size count, Dimension cutfeat,
-                  DistanceType &cutval, Offset &lim1, Offset &lim2) {
+  void planeSplit(Derived &obj, IndexType *ind, const IndexType count,
+                  int cutfeat, DistanceType &cutval, IndexType &lim1,
+                  IndexType &lim2) {
     /* Move vector indices for left subtree to front of list. */
-    Offset left = 0;
-    Offset right = count - 1;
+    IndexType left = 0;
+    IndexType right = count - 1;
     for (;;) {
-      while (left <= right &&
-             dataset_get(obj, vAcc[ind + left], cutfeat) < cutval)
+      while (left <= right && dataset_get(obj, ind[left], cutfeat) < cutval)
         ++left;
       while (right && left <= right &&
-             dataset_get(obj, vAcc[ind + right], cutfeat) >= cutval)
+             dataset_get(obj, ind[right], cutfeat) >= cutval)
         --right;
       if (left > right || !right)
         break; // "!right" was added to support unsigned Index types
-      std::swap(vAcc[ind + left], vAcc[ind + right]);
+      std::swap(ind[left], ind[right]);
       ++left;
       --right;
     }
@@ -1015,15 +989,14 @@ public:
     lim1 = left;
     right = count - 1;
     for (;;) {
-      while (left <= right &&
-             dataset_get(obj, vAcc[ind + left], cutfeat) <= cutval)
+      while (left <= right && dataset_get(obj, ind[left], cutfeat) <= cutval)
         ++left;
       while (right && left <= right &&
-             dataset_get(obj, vAcc[ind + right], cutfeat) > cutval)
+             dataset_get(obj, ind[right], cutfeat) > cutval)
         --right;
       if (left > right || !right)
         break; // "!right" was added to support unsigned Index types
-      std::swap(vAcc[ind + left], vAcc[ind + right]);
+      std::swap(ind[left], ind[right]);
       ++left;
       --right;
     }
@@ -1036,7 +1009,7 @@ public:
     assert(vec);
     DistanceType distsq = DistanceType();
 
-    for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+    for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       if (vec[i] < obj.root_bbox[i].low) {
         dists[i] = obj.distance.accum_dist(vec[i], obj.root_bbox[i].low, i);
         distsq += dists[i];
@@ -1049,7 +1022,7 @@ public:
     return distsq;
   }
 
-  void save_tree(Derived &obj, std::ostream &stream, NodePtr tree) {
+  void save_tree(Derived &obj, FILE *stream, NodePtr tree) {
     save_value(stream, *tree);
     if (tree->child1 != NULL) {
       save_tree(obj, stream, tree->child1);
@@ -1059,7 +1032,7 @@ public:
     }
   }
 
-  void load_tree(Derived &obj, std::istream &stream, NodePtr &tree) {
+  void load_tree(Derived &obj, FILE *stream, NodePtr &tree) {
     tree = obj.pool.template allocate<Node>();
     load_value(stream, *tree);
     if (tree->child1 != NULL) {
@@ -1075,12 +1048,12 @@ public:
    * loading the index object it must be constructed associated to the same
    * source of data points used while building it. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void saveIndex_(Derived &obj, std::ostream &stream) {
+  void saveIndex_(Derived &obj, FILE *stream) {
     save_value(stream, obj.m_size);
     save_value(stream, obj.dim);
     save_value(stream, obj.root_bbox);
     save_value(stream, obj.m_leaf_max_size);
-    save_value(stream, obj.vAcc);
+    save_value(stream, obj.vind);
     save_tree(obj, stream, obj.root_node);
   }
 
@@ -1089,12 +1062,12 @@ public:
    * index object must be constructed associated to the same source of data
    * points used while building the index. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void loadIndex_(Derived &obj, std::istream &stream) {
+  void loadIndex_(Derived &obj, FILE *stream) {
     load_value(stream, obj.m_size);
     load_value(stream, obj.dim);
     load_value(stream, obj.root_bbox);
     load_value(stream, obj.m_leaf_max_size);
-    load_value(stream, obj.vAcc);
+    load_value(stream, obj.vind);
     load_tree(obj, stream, obj.root_node);
   }
 };
@@ -1139,17 +1112,17 @@ public:
  * Dimensionality of data points (e.g. 3 for 3D points) \tparam IndexType Will
  * be typically size_t or int
  */
-template <typename Distance, class DatasetAdaptor, int32_t DIM = -1,
-          typename AccessorType = uint32_t>
+template <typename Distance, class DatasetAdaptor, int DIM = -1,
+          typename IndexType = size_t>
 class KDTreeSingleIndexAdaptor
     : public KDTreeBaseClass<
-          KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, AccessorType>,
-          Distance, DatasetAdaptor, DIM, AccessorType> {
+          KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>,
+          Distance, DatasetAdaptor, DIM, IndexType> {
 public:
   /** Deleted copy constructor*/
   KDTreeSingleIndexAdaptor(
-      const KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM,
-                                     AccessorType> &) = delete;
+      const KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>
+          &) = delete;
 
   /**
    * The dataset used by this index
@@ -1162,13 +1135,9 @@ public:
 
   typedef typename nanoflann::KDTreeBaseClass<
       nanoflann::KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM,
-                                          AccessorType>,
-      Distance, DatasetAdaptor, DIM, AccessorType>
+                                          IndexType>,
+      Distance, DatasetAdaptor, DIM, IndexType>
       BaseClassRef;
-
-  using Offset    = typename BaseClassRef::Offset;
-  using Size      = typename BaseClassRef::Size;
-  using Dimension = typename BaseClassRef::Dimension;
 
   typedef typename BaseClassRef::ElementType ElementType;
   typedef typename BaseClassRef::DistanceType DistanceType;
@@ -1199,7 +1168,7 @@ public:
    * @param inputData Dataset with the input features
    * @param params Basically, the maximum leaf node size
    */
-  KDTreeSingleIndexAdaptor(const Dimension dimensionality,
+  KDTreeSingleIndexAdaptor(const int dimensionality,
                            const DatasetAdaptor &inputData,
                            const KDTreeSingleIndexAdaptorParams &params =
                                KDTreeSingleIndexAdaptorParams())
@@ -1212,7 +1181,8 @@ public:
       BaseClassRef::dim = DIM;
     BaseClassRef::m_leaf_max_size = params.leaf_max_size;
 
-    buildIndex();
+    // Create a permutable array of indices to the input vectors.
+    init_vind();
   }
 
   /**
@@ -1280,10 +1250,10 @@ public:
    * `out_distances_sq` will be valid. Return may be less than `num_closest`
    * only if the number of elements in the tree is less than `num_closest`.
    */
-  Size knnSearch(const ElementType *query_point, const Size num_closest,
-                   AccessorType *out_indices, DistanceType *out_distances_sq,
+  size_t knnSearch(const ElementType *query_point, const size_t num_closest,
+                   IndexType *out_indices, DistanceType *out_distances_sq,
                    const int /* nChecks_IGNORED */ = 10) const {
-    nanoflann::KNNResultSet<DistanceType, AccessorType> resultSet(num_closest);
+    nanoflann::KNNResultSet<DistanceType, IndexType> resultSet(num_closest);
     resultSet.init(out_indices, out_distances_sq);
     this->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
     return resultSet.size();
@@ -1305,12 +1275,12 @@ public:
    * \return The number of points within the given radius (i.e. indices.size()
    * or dists.size() )
    */
-  Size
+  size_t
   radiusSearch(const ElementType *query_point, const DistanceType &radius,
-               std::vector<std::pair<AccessorType, DistanceType>> &IndicesDists,
+               std::vector<std::pair<IndexType, DistanceType>> &IndicesDists,
                const SearchParams &searchParams) const {
-    RadiusResultSet<DistanceType, AccessorType> resultSet(radius, IndicesDists);
-    const Size nFound =
+    RadiusResultSet<DistanceType, IndexType> resultSet(radius, IndicesDists);
+    const size_t nFound =
         radiusSearchCustomCallback(query_point, resultSet, searchParams);
     if (searchParams.sorted)
       std::sort(IndicesDists.begin(), IndicesDists.end(), IndexDist_Sorter());
@@ -1323,7 +1293,7 @@ public:
    * start point for your own classes. \sa radiusSearch
    */
   template <class SEARCH_CALLBACK>
-  Size radiusSearchCustomCallback(
+  size_t radiusSearchCustomCallback(
       const ElementType *query_point, SEARCH_CALLBACK &resultSet,
       const SearchParams &searchParams = SearchParams()) const {
     this->findNeighbors(resultSet, query_point, searchParams);
@@ -1338,10 +1308,10 @@ public:
   void init_vind() {
     // Create a permutable array of indices to the input vectors.
     BaseClassRef::m_size = dataset.kdtree_get_point_count();
-    if (BaseClassRef::vAcc.size() != BaseClassRef::m_size)
-      BaseClassRef::vAcc.resize(BaseClassRef::m_size);
-    for (Size i = 0; i < BaseClassRef::m_size; i++)
-      BaseClassRef::vAcc[i] = i;
+    if (BaseClassRef::vind.size() != BaseClassRef::m_size)
+      BaseClassRef::vind.resize(BaseClassRef::m_size);
+    for (size_t i = 0; i < BaseClassRef::m_size; i++)
+      BaseClassRef::vind[i] = i;
   }
 
   void computeBoundingBox(BoundingBox &bbox) {
@@ -1349,20 +1319,19 @@ public:
     if (dataset.kdtree_get_bbox(bbox)) {
       // Done! It was implemented in derived class
     } else {
-      const Size N = dataset.kdtree_get_point_count();
+      const size_t N = dataset.kdtree_get_point_count();
       if (!N)
         throw std::runtime_error("[nanoflann] computeBoundingBox() called but "
                                  "no data points found.");
-      for (Dimension i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
-        bbox[i].low = bbox[i].high =
-            this->dataset_get(*this, BaseClassRef::vAcc[0], i);
+      for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+        bbox[i].low = bbox[i].high = this->dataset_get(*this, 0, i);
       }
-      for (Offset k = 1; k < N; ++k) {
-        for (Dimension i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
-          if (this->dataset_get(*this, BaseClassRef::vAcc[k], i) < bbox[i].low)
-            bbox[i].low = this->dataset_get(*this, BaseClassRef::vAcc[k], i);
-          if (this->dataset_get(*this, BaseClassRef::vAcc[k], i) > bbox[i].high)
-            bbox[i].high = this->dataset_get(*this, BaseClassRef::vAcc[k], i);
+      for (size_t k = 1; k < N; ++k) {
+        for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+          if (this->dataset_get(*this, k, i) < bbox[i].low)
+            bbox[i].low = this->dataset_get(*this, k, i);
+          if (this->dataset_get(*this, k, i) > bbox[i].high)
+            bbox[i].high = this->dataset_get(*this, k, i);
         }
       }
     }
@@ -1383,12 +1352,13 @@ public:
       // count_leaf += (node->lr.right-node->lr.left);  // Removed since was
       // neither used nor returned to the user.
       DistanceType worst_dist = result_set.worstDist();
-      for (Offset i = node->node_type.lr.left; i < node->node_type.lr.right; ++i) {
-        const AccessorType accessor = BaseClassRef::vAcc[i]; // reorder... : i;
+      for (IndexType i = node->node_type.lr.left; i < node->node_type.lr.right;
+           ++i) {
+        const IndexType index = BaseClassRef::vind[i]; // reorder... : i;
         DistanceType dist = distance.evalMetric(
-            vec, accessor, (DIM > 0 ? DIM : BaseClassRef::dim));
+            vec, index, (DIM > 0 ? DIM : BaseClassRef::dim));
         if (dist < worst_dist) {
-          if (!result_set.addPoint(dist, BaseClassRef::vAcc[i])) {
+          if (!result_set.addPoint(dist, BaseClassRef::vind[i])) {
             // the resultset doesn't want to receive any more points, we're done
             // searching!
             return false;
@@ -1399,7 +1369,7 @@ public:
     }
 
     /* Which child branch should be taken first? */
-    Dimension idx = node->node_type.sub.divfeat;
+    int idx = node->node_type.sub.divfeat;
     ElementType val = vec[idx];
     DistanceType diff1 = val - node->node_type.sub.divlow;
     DistanceType diff2 = val - node->node_type.sub.divhigh;
@@ -1445,14 +1415,14 @@ public:
    * loading the index object it must be constructed associated to the same
    * source of data points used while building it. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void saveIndex(std::ostream &stream) { this->saveIndex_(*this, stream); }
+  void saveIndex(FILE *stream) { this->saveIndex_(*this, stream); }
 
   /**  Loads a previous index from a binary file.
    *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the
    * index object must be constructed associated to the same source of data
    * points used while building the index. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void loadIndex(std::istream &stream) { this->loadIndex_(*this, stream); }
+  void loadIndex(FILE *stream) { this->loadIndex_(*this, stream); }
 
 }; // class KDTree
 
@@ -1489,15 +1459,15 @@ public:
  * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
  * \tparam Distance The distance metric to use: nanoflann::metric_L1,
  * nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc. \tparam DIM
- * Dimensionality of data points (e.g. 3 for 3D points) \tparam AccessorType
- * Will be typically size_t or int
+ * Dimensionality of data points (e.g. 3 for 3D points) \tparam IndexType Will
+ * be typically size_t or int
  */
-template <typename Distance, class DatasetAdaptor, int32_t DIM = -1,
-          typename AccessorType = uint32_t>
+template <typename Distance, class DatasetAdaptor, int DIM = -1,
+          typename IndexType = size_t>
 class KDTreeSingleIndexDynamicAdaptor_
     : public KDTreeBaseClass<KDTreeSingleIndexDynamicAdaptor_<
-                                 Distance, DatasetAdaptor, DIM, AccessorType>,
-                             Distance, DatasetAdaptor, DIM, AccessorType> {
+                                 Distance, DatasetAdaptor, DIM, IndexType>,
+                             Distance, DatasetAdaptor, DIM, IndexType> {
 public:
   /**
    * The dataset used by this index
@@ -1512,16 +1482,12 @@ public:
 
   typedef typename nanoflann::KDTreeBaseClass<
       nanoflann::KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM,
-                                                  AccessorType>,
-      Distance, DatasetAdaptor, DIM, AccessorType>
+                                                  IndexType>,
+      Distance, DatasetAdaptor, DIM, IndexType>
       BaseClassRef;
 
   typedef typename BaseClassRef::ElementType ElementType;
   typedef typename BaseClassRef::DistanceType DistanceType;
-
-  using Offset    = typename BaseClassRef::Offset;
-  using Size      = typename BaseClassRef::Size;
-  using Dimension = typename BaseClassRef::Dimension;
 
   typedef typename BaseClassRef::Node Node;
   typedef Node *NodePtr;
@@ -1550,7 +1516,7 @@ public:
    * @param params Basically, the maximum leaf node size
    */
   KDTreeSingleIndexDynamicAdaptor_(
-      const Dimension dimensionality, const DatasetAdaptor &inputData,
+      const int dimensionality, const DatasetAdaptor &inputData,
       std::vector<int> &treeIndex_,
       const KDTreeSingleIndexAdaptorParams &params =
           KDTreeSingleIndexAdaptorParams())
@@ -1569,7 +1535,7 @@ public:
   KDTreeSingleIndexDynamicAdaptor_
   operator=(const KDTreeSingleIndexDynamicAdaptor_ &rhs) {
     KDTreeSingleIndexDynamicAdaptor_ tmp(rhs);
-    std::swap(BaseClassRef::vAcc, tmp.BaseClassRef::vAcc);
+    std::swap(BaseClassRef::vind, tmp.BaseClassRef::vind);
     std::swap(BaseClassRef::m_leaf_max_size, tmp.BaseClassRef::m_leaf_max_size);
     std::swap(index_params, tmp.index_params);
     std::swap(treeIndex, tmp.treeIndex);
@@ -1586,7 +1552,7 @@ public:
    * Builds the index
    */
   void buildIndex() {
-    BaseClassRef::m_size = BaseClassRef::vAcc.size();
+    BaseClassRef::m_size = BaseClassRef::vind.size();
     this->freeIndex(*this);
     BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
     if (BaseClassRef::m_size == 0)
@@ -1644,10 +1610,10 @@ public:
    * `out_distances_sq` will be valid. Return may be less than `num_closest`
    * only if the number of elements in the tree is less than `num_closest`.
    */
-  Size knnSearch(const ElementType *query_point, const Size num_closest,
-                   AccessorType *out_indices, DistanceType *out_distances_sq,
+  size_t knnSearch(const ElementType *query_point, const size_t num_closest,
+                   IndexType *out_indices, DistanceType *out_distances_sq,
                    const int /* nChecks_IGNORED */ = 10) const {
-    nanoflann::KNNResultSet<DistanceType, AccessorType> resultSet(num_closest);
+    nanoflann::KNNResultSet<DistanceType, IndexType> resultSet(num_closest);
     resultSet.init(out_indices, out_distances_sq);
     this->findNeighbors(resultSet, query_point, nanoflann::SearchParams());
     return resultSet.size();
@@ -1669,11 +1635,11 @@ public:
    * \return The number of points within the given radius (i.e. indices.size()
    * or dists.size() )
    */
-  Size
+  size_t
   radiusSearch(const ElementType *query_point, const DistanceType &radius,
-               std::vector<std::pair<AccessorType, DistanceType>> &IndicesDists,
+               std::vector<std::pair<IndexType, DistanceType>> &IndicesDists,
                const SearchParams &searchParams) const {
-    RadiusResultSet<DistanceType, AccessorType> resultSet(radius, IndicesDists);
+    RadiusResultSet<DistanceType, IndexType> resultSet(radius, IndicesDists);
     const size_t nFound =
         radiusSearchCustomCallback(query_point, resultSet, searchParams);
     if (searchParams.sorted)
@@ -1687,7 +1653,7 @@ public:
    * start point for your own classes. \sa radiusSearch
    */
   template <class SEARCH_CALLBACK>
-  Size radiusSearchCustomCallback(
+  size_t radiusSearchCustomCallback(
       const ElementType *query_point, SEARCH_CALLBACK &resultSet,
       const SearchParams &searchParams = SearchParams()) const {
     this->findNeighbors(resultSet, query_point, searchParams);
@@ -1703,20 +1669,20 @@ public:
     if (dataset.kdtree_get_bbox(bbox)) {
       // Done! It was implemented in derived class
     } else {
-      const Size N = BaseClassRef::m_size;
+      const size_t N = BaseClassRef::m_size;
       if (!N)
         throw std::runtime_error("[nanoflann] computeBoundingBox() called but "
                                  "no data points found.");
-      for (Dimension i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+      for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
         bbox[i].low = bbox[i].high =
-            this->dataset_get(*this, BaseClassRef::vAcc[0], i);
+            this->dataset_get(*this, BaseClassRef::vind[0], i);
       }
-      for (Offset k = 1; k < N; ++k) {
-        for (Dimension i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
-          if (this->dataset_get(*this, BaseClassRef::vAcc[k], i) < bbox[i].low)
-            bbox[i].low = this->dataset_get(*this, BaseClassRef::vAcc[k], i);
-          if (this->dataset_get(*this, BaseClassRef::vAcc[k], i) > bbox[i].high)
-            bbox[i].high = this->dataset_get(*this, BaseClassRef::vAcc[k], i);
+      for (size_t k = 1; k < N; ++k) {
+        for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
+          if (this->dataset_get(*this, BaseClassRef::vind[k], i) < bbox[i].low)
+            bbox[i].low = this->dataset_get(*this, BaseClassRef::vind[k], i);
+          if (this->dataset_get(*this, BaseClassRef::vind[k], i) > bbox[i].high)
+            bbox[i].high = this->dataset_get(*this, BaseClassRef::vind[k], i);
         }
       }
     }
@@ -1735,9 +1701,9 @@ public:
       // count_leaf += (node->lr.right-node->lr.left);  // Removed since was
       // neither used nor returned to the user.
       DistanceType worst_dist = result_set.worstDist();
-      for (Offset i = node->node_type.lr.left;
-           i < node->node_type.lr.right; ++i) {
-        const AccessorType index = BaseClassRef::vAcc[i]; // reorder... : i;
+      for (IndexType i = node->node_type.lr.left; i < node->node_type.lr.right;
+           ++i) {
+        const IndexType index = BaseClassRef::vind[i]; // reorder... : i;
         if (treeIndex[index] == -1)
           continue;
         DistanceType dist = distance.evalMetric(
@@ -1746,7 +1712,7 @@ public:
           if (!result_set.addPoint(
                   static_cast<typename RESULTSET::DistanceType>(dist),
                   static_cast<typename RESULTSET::IndexType>(
-                      BaseClassRef::vAcc[i]))) {
+                      BaseClassRef::vind[i]))) {
             // the resultset doesn't want to receive any more points, we're done
             // searching!
             return; // false;
@@ -1757,7 +1723,7 @@ public:
     }
 
     /* Which child branch should be taken first? */
-    Dimension idx = node->node_type.sub.divfeat;
+    int idx = node->node_type.sub.divfeat;
     ElementType val = vec[idx];
     DistanceType diff1 = val - node->node_type.sub.divlow;
     DistanceType diff2 = val - node->node_type.sub.divhigh;
@@ -1793,14 +1759,14 @@ public:
    * loading the index object it must be constructed associated to the same
    * source of data points used while building it. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void saveIndex(std::ostream &stream) { this->saveIndex_(*this, stream); }
+  void saveIndex(FILE *stream) { this->saveIndex_(*this, stream); }
 
   /**  Loads a previous index from a binary file.
    *   IMPORTANT NOTE: The set of data points is NOT stored in the file, so the
    * index object must be constructed associated to the same source of data
    * points used while building the index. See the example:
    * examples/saveload_example.cpp \sa loadIndex  */
-  void loadIndex(std::istream &stream) { this->loadIndex_(*this, stream); }
+  void loadIndex(FILE *stream) { this->loadIndex_(*this, stream); }
 };
 
 /** kd-tree dynaimic index
@@ -1814,25 +1780,20 @@ public:
  * \tparam DatasetAdaptor The user-provided adaptor (see comments above).
  * \tparam Distance The distance metric to use: nanoflann::metric_L1,
  * nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc. \tparam DIM
- * Dimensionality of data points (e.g. 3 for 3D points) \tparam AccessorType Will
+ * Dimensionality of data points (e.g. 3 for 3D points) \tparam IndexType Will
  * be typically size_t or int
  */
-template <typename Distance, class DatasetAdaptor, int32_t DIM = -1,
-          typename AccessorType = uint32_t>
+template <typename Distance, class DatasetAdaptor, int DIM = -1,
+          typename IndexType = size_t>
 class KDTreeSingleIndexDynamicAdaptor {
 public:
   typedef typename Distance::ElementType ElementType;
   typedef typename Distance::DistanceType DistanceType;
 
-  using Offset    = typename KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM>::Offset;
-  using Size      = typename KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM>::Size;
-  using Dimension = typename KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM>::Dimension;
-
-
 protected:
-  Size m_leaf_max_size;
-  Size treeCount;
-  Size pointCount;
+  size_t m_leaf_max_size;
+  size_t treeCount;
+  size_t pointCount;
 
   /**
    * The dataset used by this index
@@ -1845,7 +1806,7 @@ protected:
 
   KDTreeSingleIndexAdaptorParams index_params;
 
-  Dimension dim; //!< Dimensionality of each data point
+  int dim; //!< Dimensionality of each data point
 
   typedef KDTreeSingleIndexDynamicAdaptor_<Distance, DatasetAdaptor, DIM>
       index_container_t;
@@ -1858,7 +1819,7 @@ public:
 
 private:
   /** finds position of least significant unset bit */
-  int First0Bit(AccessorType num) {
+  int First0Bit(IndexType num) {
     int pos = 0;
     while (num & 1) {
       num = num >> 1;
@@ -1916,26 +1877,26 @@ public:
   /** Deleted copy constructor*/
   KDTreeSingleIndexDynamicAdaptor(
       const KDTreeSingleIndexDynamicAdaptor<Distance, DatasetAdaptor, DIM,
-                                            AccessorType> &) = delete;
+                                            IndexType> &) = delete;
 
   /** Add points to the set, Inserts all points from [start, end] */
-  void addPoints(AccessorType start, AccessorType end) {
-    Size count = end - start + 1;
+  void addPoints(IndexType start, IndexType end) {
+    size_t count = end - start + 1;
     treeIndex.resize(treeIndex.size() + count);
-    for (AccessorType idx = start; idx <= end; idx++) {
+    for (IndexType idx = start; idx <= end; idx++) {
       int pos = First0Bit(pointCount);
-      index[pos].vAcc.clear();
+      index[pos].vind.clear();
       treeIndex[pointCount] = pos;
       for (int i = 0; i < pos; i++) {
-        for (int j = 0; j < static_cast<int>(index[i].vAcc.size()); j++) {
-          index[pos].vAcc.push_back(index[i].vAcc[j]);
-          if (treeIndex[index[i].vAcc[j]] != -1)
-            treeIndex[index[i].vAcc[j]] = pos;
+        for (int j = 0; j < static_cast<int>(index[i].vind.size()); j++) {
+          index[pos].vind.push_back(index[i].vind[j]);
+          if (treeIndex[index[i].vind[j]] != -1)
+            treeIndex[index[i].vind[j]] = pos;
         }
-        index[i].vAcc.clear();
+        index[i].vind.clear();
         index[i].freeIndex(index[i]);
       }
-      index[pos].vAcc.push_back(idx);
+      index[pos].vind.push_back(idx);
       index[pos].buildIndex();
       pointCount++;
     }
@@ -1972,7 +1933,7 @@ public:
 };
 
 /** An L2-metric KD-tree adaptor for working with data directly stored in an
- * Eigen Matrix, without duplicating the data storage. You can select whether a
+ * Eigen Matrix, without duplicating the data storage. You can select whether a 
  * row or column in the matrix represents a point in the state space.
  *
  *  Example of usage:
@@ -1987,47 +1948,39 @@ public:
  *  \tparam DIM If set to >0, it specifies a compile-time fixed dimensionality
  * for the points in the data set, allowing more compiler optimizations. \tparam
  * Distance The distance metric to use: nanoflann::metric_L1,
- * nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc. \tparam row_major
+ * nanoflann::metric_L2, nanoflann::metric_L2_Simple, etc. \tparam row_major 
  * If set to true the rows of the matrix are used as the points, if set to false
  * the columns of the matrix are used as the points.
  */
-template <class MatrixType, int32_t DIM = -1, class Distance = nanoflann::metric_L2,
-          bool row_major = true>
+template <class MatrixType, int DIM = -1, class Distance = nanoflann::metric_L2,
+	  bool row_major = true>
 struct KDTreeEigenMatrixAdaptor {
   typedef KDTreeEigenMatrixAdaptor<MatrixType, DIM, Distance, row_major> self_t;
   typedef typename MatrixType::Scalar num_t;
   typedef typename MatrixType::Index IndexType;
   typedef
-      typename Distance::template traits<num_t, self_t, IndexType>::distance_t
-          metric_t;
-
+      typename Distance::template traits<num_t, self_t>::distance_t metric_t;
   typedef KDTreeSingleIndexAdaptor<metric_t, self_t,
-                                   row_major ? MatrixType::ColsAtCompileTime
-                                             : MatrixType::RowsAtCompileTime,
-                                   IndexType>
+                                   MatrixType::ColsAtCompileTime, IndexType>
       index_t;
 
   index_t *index; //! The kd-tree index for the user to call its methods as
                   //! usual with any other FLANN index.
 
-  using Offset    = typename index_t::Offset;
-  using Size      = typename index_t::Size;
-  using Dimension = typename index_t::Dimension;
-
   /// Constructor: takes a const ref to the matrix object with the data points
-  KDTreeEigenMatrixAdaptor(const Dimension dimensionality,
+  KDTreeEigenMatrixAdaptor(const size_t dimensionality,
                            const std::reference_wrapper<const MatrixType> &mat,
                            const int leaf_max_size = 10)
       : m_data_matrix(mat) {
     const auto dims = row_major ? mat.get().cols() : mat.get().rows();
-    if (static_cast<Dimension>(dims) != dimensionality)
+    if (size_t(dims) != dimensionality)
       throw std::runtime_error(
           "Error: 'dimensionality' must match column count in data matrix");
-    if (DIM > 0 && static_cast<int32_t>(dims) != DIM)
+    if (DIM > 0 && int(dims) != DIM)
       throw std::runtime_error(
           "Data set dimensionality does not match the 'DIM' template argument");
     index =
-        new index_t(dims, *this /* adaptor */,
+        new index_t(static_cast<int>(dims), *this /* adaptor */,
                     nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size));
     index->buildIndex();
   }
@@ -2046,7 +1999,7 @@ public:
    * desired. \note nChecks_IGNORED is ignored but kept for compatibility with
    * the original FLANN interface.
    */
-  inline void query(const num_t *query_point, const Size num_closest,
+  inline void query(const num_t *query_point, const size_t num_closest,
                     IndexType *out_indices, num_t *out_distances_sq,
                     const int /* nChecks_IGNORED */ = 10) const {
     nanoflann::KNNResultSet<num_t, IndexType> resultSet(num_closest);
@@ -2061,8 +2014,8 @@ public:
   self_t &derived() { return *this; }
 
   // Must return the number of data points
-  inline Size kdtree_get_point_count() const {
-    if (row_major)
+  inline size_t kdtree_get_point_count() const {
+    if(row_major)
       return m_data_matrix.get().rows();
     else
       return m_data_matrix.get().cols();
@@ -2070,7 +2023,7 @@ public:
 
   // Returns the dim'th component of the idx'th point in the class:
   inline num_t kdtree_get_pt(const IndexType idx, size_t dim) const {
-    if (row_major)
+    if(row_major)
       return m_data_matrix.get().coeff(idx, IndexType(dim));
     else
       return m_data_matrix.get().coeff(IndexType(dim), idx);
