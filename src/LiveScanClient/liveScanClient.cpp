@@ -17,7 +17,7 @@
 #include "filter.h"
 #include <chrono>
 #include <fstream>
-#include "zstd.h"
+#include <zstd.h>
 
 std::mutex m_mSocketThreadMutex;
 

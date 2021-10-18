@@ -15,7 +15,7 @@
 #pragma once
 
 #include "iCapture.h"
-#include "libfreenect/libfreenect.h"
+#include <libfreenect.h>
 #include "utils.h"
 
 class FreenectCapture : public ICapture
