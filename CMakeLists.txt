@@ -11,6 +11,9 @@ pkg_check_modules(ZSTD REQUIRED libzstd)
 #pkg_check_modules(NANOFLANN REQUIRED nanoflann)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/LiveScanClient)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OPENCV_INCLUDE_DIRS})
@@ -32,4 +35,5 @@ add_executable(client ${SOURCES})
 
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
-target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES})
+target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES} Threads::Threads)
+
