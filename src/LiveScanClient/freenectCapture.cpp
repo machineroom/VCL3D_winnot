@@ -25,6 +25,20 @@ FreenectCapture::~FreenectCapture()
 
 bool FreenectCapture::Initialize()
 {
+	printf ("freenect init\n");
+	if (freenect_init(&f_ctx, NULL) < 0) {
+		printf("freenect_init() failed\n");
+		return false;
+	}
+	/* TODO support other devices */
+	if (freenect_open_device(f_ctx, &f_dev, 0/*device_number*/) < 0) {
+		printf("Could not open device\n");
+		freenect_shutdown(f_ctx);
+		return false;
+	}
+	//set Kinect LED green to say we're awake
+	freenect_set_led(f_dev, LED_GREEN);
+	return true;
 }
 
 bool FreenectCapture::AcquireFrame()

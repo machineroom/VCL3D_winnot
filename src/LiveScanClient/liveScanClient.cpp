@@ -61,6 +61,7 @@ LiveScanClient::LiveScanClient() :
 	#else
 	pCapture = new FreenectCapture();
 	#endif
+	pCapture->Initialize();
 
     /*TODO port from windows
 	LARGE_INTEGER qpf = {0};

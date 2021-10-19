@@ -18,6 +18,7 @@
 #include <libfreenect.h>
 #include "utils.h"
 
+
 class FreenectCapture : public ICapture
 {
 public:
@@ -30,7 +31,10 @@ public:
 	void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints);
 	void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints);
 	void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints);
-private:	
+private:
+	freenect_context *f_ctx;
+	freenect_device *f_dev;
+	
 	/*ICoordinateMapper* pCoordinateMapper;
 	IKinectSensor* pKinectSensor;
 	IMultiSourceFrameReader* pMultiSourceFrameReader;
