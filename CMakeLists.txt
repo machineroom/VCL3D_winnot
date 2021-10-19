@@ -1,4 +1,3 @@
-#MAC export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
 cmake_minimum_required(VERSION 3.10)
 find_package(PkgConfig)
