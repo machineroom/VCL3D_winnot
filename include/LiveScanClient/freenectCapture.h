@@ -34,6 +34,14 @@ public:
 private:
 	freenect_context *f_ctx;
 	freenect_device *f_dev;
+	uint8_t *f_video_buffer;
+	uint16_t *f_depth_buffer;
+public:
+	//used in C callback. Yuk.
+	pthread_mutex_t f_video_mutex;
+	pthread_cond_t f_video_cond;
+	pthread_mutex_t f_depth_mutex;
+	pthread_cond_t f_depth_cond;
 	
 	/*ICoordinateMapper* pCoordinateMapper;
 	IKinectSensor* pKinectSensor;

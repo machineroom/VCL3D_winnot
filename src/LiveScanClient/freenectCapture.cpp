@@ -14,30 +14,79 @@
 //    }
 #include "freenectCapture.h"
 #include <chrono>
+#include <stdlib.h>
 
 FreenectCapture::FreenectCapture()
 {
+	f_video_buffer = (uint8_t*)malloc(640*480*3);	//24 bits per RGB sample
+	f_depth_buffer = (uint16_t*)malloc(640*480*2);	//16 bits per depth sample
+	pthread_mutex_t gl_backbuf_mutex = PTHREAD_MUTEX_INITIALIZER;
+	f_video_mutex = PTHREAD_MUTEX_INITIALIZER;
+	f_video_cond = PTHREAD_COND_INITIALIZER;
+	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
+	f_depth_cond = PTHREAD_COND_INITIALIZER;
+	
 }
 
 FreenectCapture::~FreenectCapture()
 {
 }
 
+void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
+{
+	printf ("depth\n");
+	FreenectCapture *capture = (FreenectCapture *)freenect_get_user (dev);
+	pthread_mutex_lock(&capture->f_depth_mutex);
+	pthread_cond_signal(&capture->f_depth_cond);
+	pthread_mutex_unlock(&capture->f_depth_mutex);
+}
+
+void video_cb(freenect_device *dev, void *rgb, uint32_t timestamp)
+{
+	printf ("video\n");
+	FreenectCapture *capture = (FreenectCapture *)freenect_get_user (dev);
+	pthread_mutex_lock(&capture->f_video_mutex);
+	pthread_cond_signal(&capture->f_video_cond);
+	pthread_mutex_unlock(&capture->f_video_mutex);
+}
+
 bool FreenectCapture::Initialize()
 {
 	printf ("freenect init\n");
+
 	if (freenect_init(&f_ctx, NULL) < 0) {
 		printf("freenect_init() failed\n");
 		return false;
 	}
+
+	freenect_set_log_level(f_ctx, FREENECT_LOG_DEBUG);
+	//only interested in the camera for now - no motor or audio
+	freenect_select_subdevices(f_ctx, (freenect_device_flags)FREENECT_DEVICE_CAMERA);
+
 	/* TODO support other devices */
 	if (freenect_open_device(f_ctx, &f_dev, 0/*device_number*/) < 0) {
 		printf("Could not open device\n");
 		freenect_shutdown(f_ctx);
 		return false;
 	}
+	freenect_set_user(f_dev, this);
+
 	//set Kinect LED green to say we're awake
 	freenect_set_led(f_dev, LED_GREEN);
+	
+	freenect_set_video_buffer(f_dev, f_video_buffer);
+	freenect_set_video_buffer(f_dev, f_depth_buffer);
+	
+	freenect_set_depth_callback(f_dev, depth_cb);
+	freenect_set_video_callback(f_dev, video_cb);
+	// MEDIUM = 640*480
+	freenect_set_depth_mode(f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT));
+	freenect_set_video_mode(f_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
+
+	freenect_start_depth(f_dev);
+	freenect_start_video(f_dev);
+	//set Kinect LED red to say we're watching you
+	freenect_set_led(f_dev, LED_RED);
 	return true;
 }
 
