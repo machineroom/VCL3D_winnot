@@ -20,7 +20,6 @@ FreenectCapture::FreenectCapture()
 {
 	f_video_buffer = (uint8_t*)malloc(640*480*3);	//24 bits per RGB sample
 	f_depth_buffer = (uint16_t*)malloc(640*480*2);	//16 bits per depth sample
-	pthread_mutex_t gl_backbuf_mutex = PTHREAD_MUTEX_INITIALIZER;
 	f_video_mutex = PTHREAD_MUTEX_INITIALIZER;
 	f_video_cond = PTHREAD_COND_INITIALIZER;
 	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -108,6 +107,7 @@ bool FreenectCapture::Initialize()
 
 bool FreenectCapture::AcquireFrame()
 {
+	return true;
 }
 
 void FreenectCapture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
