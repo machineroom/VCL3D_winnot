@@ -1,8 +1,9 @@
-James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of github.com:MarekKowalski/LiveScan3D.git 
-Started from the master branch. We might want to re-sync with the AzureKinect branch.
+James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of github.com:MarekKowalski/LiveScan3D.git  
+Started from the master branch. We might want to re-sync with the AzureKinect branch.  
+James' code currently uses freenect v1 which supports the xbox Kinect v1 (xbox 360) hardware. The original (Marek) Kinect integration is built for Kinect v2 (xbox one)
 
 Special stuff
-- Linux: need to run client as root to access usb device
+- Linux: may need to run client as root to access usb device
 - Mac: export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
 

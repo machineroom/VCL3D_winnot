@@ -157,6 +157,7 @@ void LiveScanClient::UpdateFrame()
 	if (!bNewFrameAcquired)
 		return;
 
+	//TODO James we need to implement these since they get the depth from the sensor into livescan client (it's not just coord mapping)
 	pCapture->MapDepthFrameToCameraSpace(m_pCameraSpaceCoordinates);
 	pCapture->MapDepthFrameToColorSpace(m_pColorCoordinatesOfDepth);
 	{
@@ -192,6 +193,7 @@ void LiveScanClient::UpdateFrame()
 		}
 	}
 
+	//TODO in the Windows build this flag controlled via a GUI button
 	if (!m_bShowDepth)
 		ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
 	else
@@ -450,22 +452,33 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector
 void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 #endif
 {
+	//JW: RGB.size() = number of pixels in visible frame, i.e. width*height
 	int size = RGB.size() * (3 + 3 * sizeof(short)) + sizeof(int);
+	//JW size = total number of bytes to be written to buffer. Calculated as:
+	// number of pixels * (3 bytes per pixel + 3 shorts of depth info (X,Y,Z)) + int (number of pixels)
+	// buffer stucture:
+	// [number of vertices]
+	// for n in vertices {
+	//	[RGB X Y Z]
+	//}
 
 	vector<char> buffer(size);
 	char *ptr2 = (char*)vertices.data();
 	int pos = 0;
 
-	int nVertices = RGB.size();
+	int nVertices = RGB.size();	
+	//JW write first int = number of following vertices (image pixels)
 	memcpy(buffer.data() + pos, &nVertices, sizeof(nVertices));
 	pos += sizeof(nVertices);
 
 	for (unsigned int i = 0; i < RGB.size(); i++)
 	{
+		//JW write 3 bytes of RGB
 		buffer[pos++] = RGB[i].rgbRed;
 		buffer[pos++] = RGB[i].rgbGreen;
 		buffer[pos++] = RGB[i].rgbBlue;
 
+		//JW write 3 shorts of depth (X,Y,Z)
 		memcpy(buffer.data() + pos, ptr2, sizeof(short)* 3);
 		ptr2 += sizeof(short) * 3;
 		pos += sizeof(short) * 3;
