@@ -1,4 +1,5 @@
-James Wilson mucking about with port to Mac/Linux, i.e. anything not windows
+James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of github.com:MarekKowalski/LiveScan3D.git 
+Started from the master branch. We might want to re-sync with the AzureKinect branch.
 
 Special stuff
 - Linux: need to run client as root to access usb device

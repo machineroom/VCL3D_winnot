@@ -18,8 +18,8 @@
 
 FreenectCapture::FreenectCapture()
 {
-	f_video_buffer = (uint8_t*)malloc(640*480*3);	//24 bits per RGB sample
-	f_depth_buffer = (uint16_t*)malloc(640*480*2);	//16 bits per depth sample
+	pColorRGBX = (RGB*)malloc(640*480*sizeof(*pColorRGBX));	//32 bits per RGBX sample
+	pDepth = (UINT16*)malloc(640*480*sizeof(*pDepth));	//16 bits per depth sample
 	f_video_mutex = PTHREAD_MUTEX_INITIALIZER;
 	f_video_cond = PTHREAD_COND_INITIALIZER;
 	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -52,13 +52,13 @@ void video_cb(freenect_device *dev, void *rgb, uint32_t timestamp)
 void *freenect_threadfunc(void *arg)
 {
 	FreenectCapture *capture = (FreenectCapture *)arg;
-	freenect_set_depth_buffer(capture->f_dev, capture->f_depth_buffer);
-	freenect_set_video_buffer(capture->f_dev, capture->f_video_buffer);
+	freenect_set_depth_buffer(capture->f_dev, capture->pDepth);
+	freenect_set_video_buffer(capture->f_dev, capture->pColorRGBX);
 	
 	freenect_set_depth_callback(capture->f_dev, depth_cb);
 	freenect_set_video_callback(capture->f_dev, video_cb);
-	// MEDIUM = 640*480
-	freenect_set_depth_mode(capture->f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT));
+	// MEDIUM = 640*480. REGISTERED = depth pixels aligned to RGB pixels
+	freenect_set_depth_mode(capture->f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_REGISTERED));
 	freenect_set_video_mode(capture->f_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
 
 	freenect_start_depth(capture->f_dev);
@@ -68,6 +68,7 @@ void *freenect_threadfunc(void *arg)
 	
 	while (freenect_process_events(capture->f_ctx) >= 0) {
 	}
+	return NULL;
 }
 
 bool FreenectCapture::Initialize()
@@ -101,8 +102,9 @@ bool FreenectCapture::Initialize()
 		freenect_shutdown(f_ctx);
 		return false;
 	}
-	
-	return true;
+	bInitialized = true;
+
+	return bInitialized;
 }
 
 bool FreenectCapture::AcquireFrame()
@@ -110,6 +112,7 @@ bool FreenectCapture::AcquireFrame()
 	return true;
 }
 
+// TODO leaving these unimplemented for now since the realsense (our actual target) matches the RGB & depth resolutions so this mapping isn't required.
 void FreenectCapture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 }

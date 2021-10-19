@@ -34,19 +34,9 @@ public:
 	//used in C callback so must be public. Yuk.
 	freenect_context *f_ctx;
 	freenect_device *f_dev;
-	uint8_t *f_video_buffer;
-	uint16_t *f_depth_buffer;
 	pthread_mutex_t f_video_mutex;
 	pthread_cond_t f_video_cond;
 	pthread_mutex_t f_depth_mutex;
 	pthread_cond_t f_depth_cond;
 	
-	/*ICoordinateMapper* pCoordinateMapper;
-	IKinectSensor* pKinectSensor;
-	IMultiSourceFrameReader* pMultiSourceFrameReader;
-
-	void GetDepthFrame(IMultiSourceFrame* pMultiFrame);
-	void GetColorFrame(IMultiSourceFrame* pMultiFrame);
-	void GetBodyFrame(IMultiSourceFrame* pMultiFrame);
-	void GetBodyIndexFrame(IMultiSourceFrame* pMultiFrame);*/
 };
