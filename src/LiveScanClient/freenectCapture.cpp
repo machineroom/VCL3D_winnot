@@ -81,8 +81,8 @@ bool FreenectCapture::Initialize()
 	}
 
 	freenect_set_log_level(f_ctx, FREENECT_LOG_DEBUG);
-	//only interested in the camera for now - no motor or audio
-	freenect_select_subdevices(f_ctx, (freenect_device_flags)FREENECT_DEVICE_CAMERA);
+	//only interested in the camera and motor for now - no audio (note camera also means LED)
+	freenect_select_subdevices(f_ctx, (freenect_device_flags)(FREENECT_DEVICE_MOTOR | FREENECT_DEVICE_CAMERA));
 
 	/* TODO support other devices */
 	if (freenect_open_device(f_ctx, &f_dev, 0/*device_number*/) < 0) {
