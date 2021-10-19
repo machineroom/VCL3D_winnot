@@ -31,13 +31,11 @@ public:
 	void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints);
 	void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints);
 	void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints);
-private:
+	//used in C callback so must be public. Yuk.
 	freenect_context *f_ctx;
 	freenect_device *f_dev;
 	uint8_t *f_video_buffer;
 	uint16_t *f_depth_buffer;
-public:
-	//used in C callback. Yuk.
 	pthread_mutex_t f_video_mutex;
 	pthread_cond_t f_video_cond;
 	pthread_mutex_t f_depth_mutex;

@@ -50,6 +50,27 @@ void video_cb(freenect_device *dev, void *rgb, uint32_t timestamp)
 	pthread_mutex_unlock(&capture->f_video_mutex);
 }
 
+void *freenect_threadfunc(void *arg)
+{
+	FreenectCapture *capture = (FreenectCapture *)arg;
+	freenect_set_depth_buffer(capture->f_dev, capture->f_depth_buffer);
+	freenect_set_video_buffer(capture->f_dev, capture->f_video_buffer);
+	
+	freenect_set_depth_callback(capture->f_dev, depth_cb);
+	freenect_set_video_callback(capture->f_dev, video_cb);
+	// MEDIUM = 640*480
+	freenect_set_depth_mode(capture->f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT));
+	freenect_set_video_mode(capture->f_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
+
+	freenect_start_depth(capture->f_dev);
+	freenect_start_video(capture->f_dev);
+	//set Kinect LED red to say we're watching you
+	freenect_set_led(capture->f_dev, LED_RED);
+	
+	while (freenect_process_events(capture->f_ctx) >= 0) {
+	}
+}
+
 bool FreenectCapture::Initialize()
 {
 	printf ("freenect init\n");
@@ -69,24 +90,19 @@ bool FreenectCapture::Initialize()
 		freenect_shutdown(f_ctx);
 		return false;
 	}
-	freenect_set_user(f_dev, this);
-
 	//set Kinect LED green to say we're awake
 	freenect_set_led(f_dev, LED_GREEN);
 	
-	freenect_set_video_buffer(f_dev, f_video_buffer);
-	freenect_set_video_buffer(f_dev, f_depth_buffer);
+	freenect_set_user(f_dev, this);
+	int res;
+	pthread_t freenect_thread;
+	res = pthread_create(&freenect_thread, NULL, freenect_threadfunc, this);
+	if (res) {
+		printf("pthread_create failed\n");
+		freenect_shutdown(f_ctx);
+		return false;
+	}
 	
-	freenect_set_depth_callback(f_dev, depth_cb);
-	freenect_set_video_callback(f_dev, video_cb);
-	// MEDIUM = 640*480
-	freenect_set_depth_mode(f_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT));
-	freenect_set_video_mode(f_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
-
-	freenect_start_depth(f_dev);
-	freenect_start_video(f_dev);
-	//set Kinect LED red to say we're watching you
-	freenect_set_led(f_dev, LED_RED);
 	return true;
 }
 
