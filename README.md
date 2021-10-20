@@ -6,6 +6,10 @@ Special stuff
 - Linux: may need to run client as root to access usb device
 - Mac: export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
+Useful stuff
+- https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
+- http://www.bryancook.net/2014/03/mapping-between-kinect-color-and-depth.html
+
 
 # LiveScan3D #
 LiveScan3D is a system designed for real time 3D reconstruction using multiple AzureKinect or Kinect v2 depth sensors simultaneously at real time speed. The code for working with Kinect v2 is in the master branch, and the v1.x.x releases. If you want to work with Azure Kinect please use the appropriately named branch.
