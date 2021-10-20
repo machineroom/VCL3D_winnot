@@ -156,11 +156,13 @@ void FreenectCapture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 
 void FreenectCapture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
-	assert ("implement me");
+	bool implemented=false;
+	assert (implemented);
 }
 
 void FreenectCapture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
-	assert ("implement me");
+	bool implemented=false;
+	assert (implemented);
 }
 
