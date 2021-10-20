@@ -62,6 +62,12 @@ LiveScanClient::LiveScanClient() :
 	pCapture = new FreenectCapture();
 	#endif
 	pCapture->Initialize();
+	m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
+
+	m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
+	m_pColorCoordinatesOfDepth = new Point2f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
+	m_pDepthCoordinatesOfColor = new Point2f[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
+
 
     /*TODO port from windows
 	LARGE_INTEGER qpf = {0};
@@ -157,7 +163,6 @@ void LiveScanClient::UpdateFrame()
 	if (!bNewFrameAcquired)
 		return;
 
-	//TODO James we need to implement these since they get the depth from the sensor into livescan client (it's not just coord mapping)
 	pCapture->MapDepthFrameToCameraSpace(m_pCameraSpaceCoordinates);
 	pCapture->MapDepthFrameToColorSpace(m_pColorCoordinatesOfDepth);
 	{

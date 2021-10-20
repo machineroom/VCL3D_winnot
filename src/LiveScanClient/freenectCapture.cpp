@@ -18,8 +18,12 @@
 
 FreenectCapture::FreenectCapture()
 {
-	pColorRGBX = (RGB*)malloc(640*480*sizeof(*pColorRGBX));	//32 bits per RGBX sample
-	pDepth = (UINT16*)malloc(640*480*sizeof(*pDepth));	//16 bits per depth sample
+	nDepthFrameWidth = 640;
+	nDepthFrameHeight = 480;
+	nColorFrameWidth = 640;
+	nColorFrameHeight = 480;
+	pColorRGBX = (RGB*)malloc(nColorFrameWidth*nColorFrameHeight*sizeof(*pColorRGBX));	//32 bits per RGBX sample
+	pDepth = (UINT16*)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*pDepth));	//16 bits per depth sample
 	f_video_mutex = PTHREAD_MUTEX_INITIALIZER;
 	f_video_cond = PTHREAD_COND_INITIALIZER;
 	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -112,16 +116,40 @@ bool FreenectCapture::AcquireFrame()
 	return true;
 }
 
-// TODO leaving these unimplemented for now since the realsense (our actual target) matches the RGB & depth resolutions so this mapping isn't required.
+// for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
+// We're using depth mode FREENECT_DEPTH_REGISTERED so the depth readings are aligned with the RGB data by freenect library
+
+// Maps depth pixels (mm readings) to 3d coordinates (X,Y,Z in mm)
 void FreenectCapture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
+	//MS kinect pCoordinateMapper->MapDepthFrameToCameraSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (CameraSpacePoint*)pCameraSpacePoints);
+	uint16_t *depthp = pDepth;
+	Point3f *out = pCameraSpacePoints;
+	for (int y=0; y < nDepthFrameHeight; y++) {
+		for (int x=0; x < nDepthFrameWidth; x++) {
+			//TODO x,y are wrong - 0,0 is centre and measured in mm, not pixels
+			out->X = (float)x;
+			out->Y = (float)y;
+			out->Z = (float)*depthp++;
+		}	
+	}	
+}
+
+// Maps depth pixels (???) to RGB coordinates
+void FreenectCapture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
+{
+	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
+	uint16_t *depthp = pDepth;
+	Point2f	*out = pColorSpacePoints;
+	for (int y=0; y < nDepthFrameHeight; y++) {
+		for (int x=0; x < nDepthFrameWidth; x++) {
+			out->X = (float)x;
+			out->Y = (float)y;
+		}	
+	}	
 }
 
 void FreenectCapture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
-{
-}
-
-void FreenectCapture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 }
 
