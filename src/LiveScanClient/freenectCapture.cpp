@@ -16,6 +16,7 @@
 #include <chrono>
 #include <stdlib.h>
 #include <libfreenect_registration.h>
+#include <cassert>
 
 FreenectCapture::FreenectCapture()
 {
@@ -29,7 +30,6 @@ FreenectCapture::FreenectCapture()
 	f_video_cond = PTHREAD_COND_INITIALIZER;
 	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
 	f_depth_cond = PTHREAD_COND_INITIALIZER;
-	
 }
 
 FreenectCapture::~FreenectCapture()
@@ -156,9 +156,11 @@ void FreenectCapture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 
 void FreenectCapture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
+	assert ("implement me");
 }
 
 void FreenectCapture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
+	assert ("implement me");
 }
 
