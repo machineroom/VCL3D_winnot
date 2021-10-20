@@ -15,6 +15,7 @@
 #include "freenectCapture.h"
 #include <chrono>
 #include <stdlib.h>
+#include <libfreenect_registration.h>
 
 FreenectCapture::FreenectCapture()
 {
@@ -123,14 +124,17 @@ bool FreenectCapture::AcquireFrame()
 void FreenectCapture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToCameraSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (CameraSpacePoint*)pCameraSpacePoints);
+	//MS Kinect CameraSpacePoint { float X, Y, Z; };
 	uint16_t *depthp = pDepth;
 	Point3f *out = pCameraSpacePoints;
 	for (int y=0; y < nDepthFrameHeight; y++) {
 		for (int x=0; x < nDepthFrameWidth; x++) {
-			//TODO x,y are wrong - 0,0 is centre and measured in mm, not pixels
-			out->X = (float)x;
-			out->Y = (float)y;
-			out->Z = (float)*depthp++;
+			double wx, wy;
+			freenect_camera_to_world(f_dev, x, y, *depthp, &wx, &wy);
+			out->X = (float)wx;
+			out->Y = (float)wy;
+			out->Z = (float)*depthp;
+			depthp++;
 		}	
 	}	
 }
@@ -139,6 +143,7 @@ void FreenectCapture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 void FreenectCapture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
+	//MS Kinect ColorSpacePoint { float X, Y; };
 	uint16_t *depthp = pDepth;
 	Point2f	*out = pColorSpacePoints;
 	for (int y=0; y < nDepthFrameHeight; y++) {
