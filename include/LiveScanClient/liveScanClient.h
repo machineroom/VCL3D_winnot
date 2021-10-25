@@ -15,7 +15,8 @@
 #pragma once
 
 //#include "resource.h"
-//#include "ImageRenderer.h"
+#include "imageRendererGLX.h"
+
 #include "socketCS.h"
 #include "calibration.h"
 #include "utils.h"
@@ -89,9 +90,7 @@ private:
 	Point2f* m_pColorCoordinatesOfDepth;
 	Point2f* m_pDepthCoordinatesOfColor;
 
-    // TODO port off Direct2D
-    //ImageRenderer* m_pDrawColor;
-    //ID2D1Factory* m_pD2DFactory;
+    ImageRendererGLX* m_pDrawColor;
 	RGB* m_pDepthRGBX;
 
 	void UpdateFrame();

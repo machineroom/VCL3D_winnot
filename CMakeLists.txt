@@ -10,6 +10,9 @@ pkg_check_modules(ZSTD REQUIRED libzstd)
 #pkg_check_modules(NANOFLANN REQUIRED nanoflann)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
 pkg_check_modules(FREENECT2 REQUIRED freenect2)
+pkg_check_modules(GLFW3 REQUIRED glfw3)
+set(OpenGL_GL_PREFERENCE "GLVND")
+find_package(OpenGL REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -21,6 +24,7 @@ include_directories(${ZSTD_INCLUDE_DIRS})
 include_directories(${NANOFLANN_INCLUDE_DIRS})
 include_directories(${FREENECT_INCLUDE_DIRS})
 include_directories(${FREENECT2_INCLUDE_DIRS})
+include_directories(${GLFW3_INCLUDE_DIRS})
 
 link_directories(${OPENCV_LIBRARY_DIRS})
 
@@ -32,9 +36,21 @@ list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/LiveScanClient/kinectCa
 
 list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/socketCS.cpp)
 
+    LIST(APPEND RESOURCES
+      src/LiveScanClient/shader/debug.fs
+      src/LiveScanClient/shader/default.vs
+      src/LiveScanClient/shader/filter1.fs
+      src/LiveScanClient/shader/filter2.fs
+      src/LiveScanClient/shader/stage1.fs
+      src/LiveScanClient/shader/stage2.fs
+    )
+
 add_executable(client ${SOURCES})
 
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
-target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES} ${FREENECT2_LINK_LIBRARIES} Threads::Threads)
+target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} 
+                              ${FREENECT_LINK_LIBRARIES} ${FREENECT2_LINK_LIBRARIES}
+                              ${GLFW3_LINK_LIBRARIES} OpenGL::GL
+                              Threads::Threads)
 

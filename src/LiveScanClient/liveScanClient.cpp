@@ -32,9 +32,7 @@ LiveScanClient::LiveScanClient() :
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
     m_nNextStatusTime(0LL),
-	// TODO port off Direct2D
-    //m_pD2DFactory(NULL),
-    //m_pDrawColor(NULL),
+    m_pDrawColor(NULL),
 	m_pDepthRGBX(NULL),
 	m_pCameraSpaceCoordinates(NULL),
 	m_pColorCoordinatesOfDepth(NULL),
@@ -56,6 +54,7 @@ LiveScanClient::LiveScanClient() :
 	m_nFilterNeighbors(10),
 	m_fFilterThreshold(0.01f)
 {
+
 #ifdef KINECT
 	pCapture = new KinectCapture();
 #else
@@ -71,6 +70,16 @@ LiveScanClient::LiveScanClient() :
 	m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
 	m_pColorCoordinatesOfDepth = new Point2f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
 	m_pDepthCoordinatesOfColor = new Point2f[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
+
+	// Create and initialize a new image renderer (take a look at ImageRenderer.h)
+	// We'll use this to draw the data we receive from the Kinect to the screen
+	bool hr;
+	m_pDrawColor = new ImageRendererGLX();
+	hr = m_pDrawColor->Initialize(pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, pCapture->nColorFrameWidth * sizeof(RGB));
+	if (!hr)
+	{
+		std::cout << "GLX drawing init failed" << std::endl;
+	}
 
 
     /*TODO port from windows
@@ -93,12 +102,11 @@ LiveScanClient::LiveScanClient() :
 LiveScanClient::~LiveScanClient()
 {
     // clean up Direct2D renderer
-	// TODO port off Direct2D
-    /*if (m_pDrawColor)
+    if (m_pDrawColor)
     {
         delete m_pDrawColor;
         m_pDrawColor = NULL;
-    }*/
+    }
 
 	if (pCapture)
 	{
@@ -135,8 +143,6 @@ LiveScanClient::~LiveScanClient()
 		delete m_pClientSocket;
 		m_pClientSocket = NULL;
 	}
-    // clean up Direct2D
-    //SafeRelease(m_pD2DFactory);
 }
 
 int LiveScanClient::Run()
@@ -247,9 +253,8 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight
 			m_pDepthRGBX[i].rgbBlue = intensity;
 		}
 
-		// Draw the data with Direct2D
-		// TODO port off Direct2D
-		//m_pDrawColor->Draw(reinterpret_cast<BYTE*>(m_pDepthRGBX), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
+		// Draw the data
+		m_pDrawColor->Draw(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB));
 	}
 }
 
@@ -258,9 +263,8 @@ void LiveScanClient::ProcessColor(RGB* pBuffer, int nWidth, int nHeight)
     // Make sure we've received valid data
 	if (pBuffer && (nWidth == pCapture->nColorFrameWidth) && (nHeight == pCapture->nColorFrameHeight))
     {
-        // Draw the data with Direct2D
-		// TODO port off Direct2D
-		//m_pDrawColor->Draw(reinterpret_cast<BYTE*>(pBuffer), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB), pCapture->vBodies);
+        // Draw the data
+		m_pDrawColor->Draw(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB));
     }
 }
 
