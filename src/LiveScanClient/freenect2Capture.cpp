@@ -13,8 +13,8 @@
 //        year={2015},
 //    }
 #include "freenect2Capture.h"
-#include <chrono>
 #include <libfreenect_registration.h>
+#include <chrono>
 #include <cassert>
 #include <iostream>
 #include <cstdlib>
@@ -29,14 +29,12 @@ Freenect2Capture::Freenect2Capture()
 	nColorFrameHeight = 480;
 	pColorRGBX = (RGB*)malloc(nColorFrameWidth*nColorFrameHeight*sizeof(*pColorRGBX));	//32 bits per RGBX sample
 	pDepth = (UINT16*)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*pDepth));	//16 bits per depth sample
-	f_video_mutex = PTHREAD_MUTEX_INITIALIZER;
-	f_video_cond = PTHREAD_COND_INITIALIZER;
-	f_depth_mutex = PTHREAD_MUTEX_INITIALIZER;
-	f_depth_cond = PTHREAD_COND_INITIALIZER;
 }
 
 Freenect2Capture::~Freenect2Capture()
 {
+	dev->stop();
+	dev->close();
 }
 
 bool Freenect2Capture::Initialize()
@@ -79,6 +77,20 @@ bool Freenect2Capture::Initialize()
 		return false;
 	}
 
+	/// [listeners]
+	int types = libfreenect2::Frame::Color | libfreenect2::Frame::Depth;
+	listener = new libfreenect2::SyncMultiFrameListener (types);
+
+	dev->setColorFrameListener (listener);
+	dev->setIrAndDepthFrameListener(listener);
+
+
+	/// [start]
+    if (!dev->start()) {
+		std::cout << "failure starting device!" << std::endl;
+		return false;
+	}
+
 	bInitialized = true;
 
 	return bInitialized;
@@ -86,8 +98,21 @@ bool Freenect2Capture::Initialize()
 
 bool Freenect2Capture::AcquireFrame()
 {
+	libfreenect2::FrameMap frames;
+    if (!listener->waitForNewFrame(frames, 10*1000)) // 10 sconds
+    {
+		std::cout << "timeout!" << std::endl;
+		return false;
+    }
+    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+    libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
+    std::cout << "frame!" << std::endl;
+
+    listener->release(frames);
+
 	return true;
 }
+
 
 // for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 // We're using depth mode FREENECT_DEPTH_REGISTERED so the depth readings are aligned with the RGB data by freenect library
