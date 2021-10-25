@@ -35,14 +35,12 @@ public:
 	void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints);
 	void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints);
 	void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints);
-	//used in C callback so must be public. Yuk.
-    libfreenect2::Freenect2 freenect2;
-    libfreenect2::Freenect2Device *dev = 0;
-    libfreenect2::PacketPipeline *pipeline = 0;
-    libfreenect2::SyncMultiFrameListener *listener = 0;
-	pthread_mutex_t f_video_mutex;
-	pthread_cond_t f_video_cond;
-	pthread_mutex_t f_depth_mutex;
-	pthread_cond_t f_depth_cond;
-	
+private:
+	libfreenect2::Freenect2 freenect2;
+	libfreenect2::Freenect2Device *dev = 0;
+	libfreenect2::PacketPipeline *pipeline = 0;
+	libfreenect2::SyncMultiFrameListener *listener = 0;
+	libfreenect2::Registration *registration = 0;
+	libfreenect2::Frame *undistorted;
+	libfreenect2::Frame *registered;
 };

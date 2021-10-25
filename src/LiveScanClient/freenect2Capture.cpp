@@ -18,17 +18,25 @@
 #include <cassert>
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
+#include <cmath>
 
 
 Freenect2Capture::Freenect2Capture()
 {
 	libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Debug));
-	nDepthFrameWidth = 640;
-	nDepthFrameHeight = 480;
-	nColorFrameWidth = 640;
-	nColorFrameHeight = 480;
+	//These are just known facts about the kinect2. From freenect2/frame_listener.hpp:
+    //Color = 1, ///< 1920x1080. BGRX or RGBX.
+    //Depth = 4  ///< 512x424 float, unit: millimeter. Non-positive, NaN, and infinity are invalid or missing data.
+	nDepthFrameWidth = 512;
+	nDepthFrameHeight = 424;
+	nColorFrameWidth = 1920;
+	nColorFrameHeight = 1080;
+	// The buffers accessed by livescanclient
 	pColorRGBX = (RGB*)malloc(nColorFrameWidth*nColorFrameHeight*sizeof(*pColorRGBX));	//32 bits per RGBX sample
 	pDepth = (UINT16*)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*pDepth));	//16 bits per depth sample
+	undistorted = new libfreenect2::Frame (nDepthFrameWidth, nDepthFrameHeight, sizeof(float));
+	registered = new libfreenect2::Frame (nDepthFrameWidth, nDepthFrameHeight, sizeof(float));
 }
 
 Freenect2Capture::~Freenect2Capture()
@@ -43,7 +51,7 @@ bool Freenect2Capture::Initialize()
 		
 	std::cout << "freenect2 init" << std::endl;
 
-    //TODO do we need cuda/Gl pipelines? or a pipeline at all?
+    //TODO do we need to override the default pipeline? if so do it now.
     /*pipeline = new libfreenect2::CpuPacketPipeline();
 	if(pipeline == 0)
 	{
@@ -90,6 +98,8 @@ bool Freenect2Capture::Initialize()
 		std::cout << "failure starting device!" << std::endl;
 		return false;
 	}
+	
+	registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
 
 	bInitialized = true;
 
@@ -108,6 +118,19 @@ bool Freenect2Capture::AcquireFrame()
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
     std::cout << "frame!" << std::endl;
 
+	//copy frame data into our buffers so livescan can process it
+	//TODO check dimensions won't overwrite our buffer
+	memcpy (pColorRGBX, rgb->data, rgb->width * rgb->height * rgb->bytes_per_pixel);
+
+	//livescan3d expects depth as shorts. freenect2 gives as floats
+	long pixelCounter = 0;
+	for (int y=0; y < depth->height; y++) {
+		for (int x=0; x < depth->width; x++) {
+			pDepth[pixelCounter] = depth->data[pixelCounter];
+			pixelCounter++;
+		}
+	}
+	registration->apply(rgb, depth, undistorted, registered);
     listener->release(frames);
 
 	return true;
@@ -115,38 +138,62 @@ bool Freenect2Capture::AcquireFrame()
 
 
 // for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
-// We're using depth mode FREENECT_DEPTH_REGISTERED so the depth readings are aligned with the RGB data by freenect library
-
-// Maps depth pixels (mm readings) to 3d coordinates (X,Y,Z in mm)
+// mapping between depth pixel coordinates and 3D point coordinates
 void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToCameraSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (CameraSpacePoint*)pCameraSpacePoints);
 	//MS Kinect CameraSpacePoint { float X, Y, Z; };
-	uint16_t *depthp = pDepth;
 	Point3f *out = pCameraSpacePoints;
-	for (int y=0; y < nDepthFrameHeight; y++) {
-		for (int x=0; x < nDepthFrameWidth; x++) {
-			double wx, wy;
-//			freenect_camera_to_world(f_dev, x, y, *depthp, &wx, &wy);
-			out->X = (float)wx;
-			out->Y = (float)wy;
-			out->Z = (float)*depthp;
-			depthp++;
+	for (int row=0; row < nDepthFrameHeight; row++) {
+		for (int col=0; col < nDepthFrameWidth; col++) {
+			float x, y, z;
+ 		  /* freenect2 getPointXYZ doc states:
+ 		    Construct a 3-D point in a point cloud.
+		   * @param undistorted Undistorted depth frame from apply().
+		   * @param r Row (y) index in depth image.
+		   * @param c Column (x) index in depth image.
+		   * @param[out] x X coordinate of the 3-D point (meter).
+		   * @param[out] y Y coordinate of the 3-D point (meter).
+		   * @param[out] z Z coordinate of the 3-D point (meter).
+		   */
+			registration->getPointXYZ (undistorted, row, col, x, y, z);
+			// convert metres to mm as expected by livescan
+			out->X = x*1000.0f;
+			out->Y = y*1000.0f;
+			out->Z = z*1000.0f;
 		}	
 	}	
 }
 
-// Maps depth pixels (???) to RGB coordinates
+// mapping between depth pixel coordinates to the corresponding pixel in the color image
+// TODO freenect2 provides the mapping functions that livescan needs so this can be heavily optimised - but the current iCapture interface isn't flexible enough
 void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
 	//MS Kinect ColorSpacePoint { float X, Y; };
-	uint16_t *depthp = pDepth;
-	Point2f	*out = pColorSpacePoints;
-	for (int y=0; y < nDepthFrameHeight; y++) {
-		for (int x=0; x < nDepthFrameWidth; x++) {
-			out->X = (float)x;
-			out->Y = (float)y;
+	Point2f *out = pColorSpacePoints;
+	for (int row=0; row < nDepthFrameHeight; row++) {
+		for (int col=0; col < nDepthFrameWidth; col++) {
+			float x, y, z;
+			registration->getPointXYZ (undistorted, row, col, x, y, z);
+ 		  	/* freenect2 getPointXYZ doc states:
+			/** Undistort and register a single depth point to color camera.
+			   * @param dx Distorted depth coordinate x (pixel)
+			   * @param dy Distorted depth coordinate y (pixel)
+			   * @param dz Depth value (millimeter)
+			   * @param[out] cx Undistorted color coordinate x (normalized)
+			   * @param[out] cy Undistorted color coordinate y (normalized)
+			   */
+			   
+			if (std::isnan(x) || std::isnan(y) || std::isnan(z)) {
+				out->X = NAN;
+				out->Y = NAN;
+			} else {
+	  			float cx, cy;	//color coords
+				registration->apply (x,y,z,cx,cy);
+				out->X = cx;
+				out->Y = cy;
+			}
 		}	
 	}	
 }

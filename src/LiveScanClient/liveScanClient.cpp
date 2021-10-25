@@ -171,10 +171,17 @@ void LiveScanClient::UpdateFrame()
 	pCapture->MapDepthFrameToColorSpace(m_pColorCoordinatesOfDepth);
 	{
 		std::lock_guard<std::mutex> lock(m_mSocketThreadMutex);
+		//JW what's going on here?
+		// Guts of StoreFrame: 
+		//   for (v in vertices):
+		//     RGB = color[mapping[v.X, v.Y]];
+		//   vertices are offset & rotated accoring to calibration
+		// vertices & RGB vectors are what's sent to the server
+
 #ifdef KINECT
 		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
 #else
-		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX);
+		StoreFrame(m_pCameraSpaceCoordinates/*vertices*/, m_pColorCoordinatesOfDepth/*mapping*/, pCapture->pColorRGBX/*color*/);
 #endif
 
 		if (m_bCaptureFrame)
@@ -202,6 +209,7 @@ void LiveScanClient::UpdateFrame()
 		}
 	}
 
+	//locally render either the depth or colour buffers
 	//TODO in the Windows build this flag controlled via a GUI button
 	if (!m_bShowDepth)
 		ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
