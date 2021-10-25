@@ -156,7 +156,6 @@ void Viewer::start()
 bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, bool depth)
 {
 
-    GLint x = 0, y = 0;
     int fb_width, fb_width_half, fb_height, fb_height_half;
 
     // Using the frame buffer size to account for screens where window.size != framebuffer.size, e.g. retina displays
@@ -164,13 +163,11 @@ bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_heigh
     fb_width_half = (fb_width + 1) / 2;
     fb_height_half = (fb_height + 1) / 2;
 
+	//TODO could be much nicer.... (position depth to the right of colour)
 	if (depth) {
-		//TODO could be much nicer.... (position depth to the right of colour)
-	    glViewport(fb_width_half, y, fb_width_half, fb_height_half);
-	}
-	if (depth) {
-		//TODO could be much nicer.... (position depth to the right of colour)
-	    glViewport(0, y, fb_width_half, fb_height_half);
+	    glViewport(fb_width_half, 0, fb_width_half, fb_height_half);
+	} else {
+	    glViewport(0, 0, fb_width_half, fb_height_half);
 	}
 
     float w = static_cast<float>(frame_width);

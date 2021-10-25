@@ -211,7 +211,7 @@ void LiveScanClient::UpdateFrame()
 	*/
 	m_viewer.start();
 	ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
-//TODO relies on some unimplemented mapping code	ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
+	ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
 	if (m_viewer.finish()) {
 		exit(0);
 	}

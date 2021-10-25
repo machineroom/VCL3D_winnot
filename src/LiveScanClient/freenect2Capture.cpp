@@ -200,13 +200,56 @@ void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 
 void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
-	bool implemented=false;
-	assert (implemented);
+	// TODO maybe? like seriously I have no idea.
+	Point3f *out = pCameraSpacePoints;
+	for (int row=0; row < nDepthFrameHeight; row++) {
+		for (int col=0; col < nDepthFrameWidth; col++) {
+			float x, y, z;
+ 		  /* freenect2 getPointXYZ doc states:
+ 		    Construct a 3-D point in a point cloud.
+		   * @param undistorted Undistorted depth frame from apply().
+		   * @param r Row (y) index in depth image.
+		   * @param c Column (x) index in depth image.
+		   * @param[out] x X coordinate of the 3-D point (meter).
+		   * @param[out] y Y coordinate of the 3-D point (meter).
+		   * @param[out] z Z coordinate of the 3-D point (meter).
+		   */
+			registration->getPointXYZ (registered, row, col, x, y, z);
+			// convert metres to mm as expected by livescan
+			out->X = x*1000.0f;
+			out->Y = y*1000.0f;
+			out->Z = z*1000.0f;
+		}	
+	}	
 }
 
 void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
-	bool implemented=false;
-	assert (implemented);
+	// TODO maybe? like seriously I have no idea.
+	Point2f *out = pDepthSpacePoints;
+	for (int row=0; row < nDepthFrameHeight; row++) {
+		for (int col=0; col < nDepthFrameWidth; col++) {
+			float x, y, z;
+			registration->getPointXYZ (registered, row, col, x, y, z);
+ 		  	/* freenect2 getPointXYZ doc states:
+			/** Undistort and register a single depth point to color camera.
+			   * @param dx Distorted depth coordinate x (pixel)
+			   * @param dy Distorted depth coordinate y (pixel)
+			   * @param dz Depth value (millimeter)
+			   * @param[out] cx Undistorted color coordinate x (normalized)
+			   * @param[out] cy Undistorted color coordinate y (normalized)
+			   */
+			   
+			if (std::isnan(x) || std::isnan(y) || std::isnan(z)) {
+				out->X = NAN;
+				out->Y = NAN;
+			} else {
+	  			float cx, cy;	//color coords
+				registration->apply (x,y,z,cx,cy);
+				out->X = cx;
+				out->Y = cy;
+			}
+		}	
+	}	
 }
 
