@@ -146,91 +146,81 @@ void Viewer::onOpenGLBindingsChanged(OpenGLBindings *b)
     ir.gl(b);
 }
 
-bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel)
+// start a new render, maybe 1 or more frames rendered after this
+void Viewer::start()
 {
     // wipe the drawing surface clear
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, bool depth)
+{
 
     GLint x = 0, y = 0;
     int fb_width, fb_width_half, fb_height, fb_height_half;
 
-    std::map<std::string, libfreenect2::Frame*>::iterator iter;
-    
-        // Using the frame buffer size to account for screens where window.size != framebuffer.size, e.g. retina displays
-        glfwGetFramebufferSize(window, &fb_width, &fb_height);
-        fb_width_half = (fb_width + 1) / 2;
-        fb_height_half = (fb_height + 1) / 2;
+    // Using the frame buffer size to account for screens where window.size != framebuffer.size, e.g. retina displays
+    glfwGetFramebufferSize(window, &fb_width, &fb_height);
+    fb_width_half = (fb_width + 1) / 2;
+    fb_height_half = (fb_height + 1) / 2;
 
-        glViewport(x, y, fb_width_half, fb_height_half);
-        x += fb_width_half;
-        if (x >= (fb_width - 1))
-        {
-            x = 0;
-            y += fb_height_half;
-        }
+	if (depth) {
+		//TODO could be much nicer.... (position depth to the right of colour)
+	    glViewport(fb_width_half, y, fb_width_half, fb_height_half);
+	}
+	if (depth) {
+		//TODO could be much nicer.... (position depth to the right of colour)
+	    glViewport(0, y, fb_width_half, fb_height_half);
+	}
 
-        float w = static_cast<float>(frame_width);
-        float h = static_cast<float>(frame_height);
+    float w = static_cast<float>(frame_width);
+    float h = static_cast<float>(frame_height);
 
-        Vertex bl = { -1.0f, -1.0f, 0.0f, 0.0f };
-        Vertex br = { 1.0f, -1.0f, w, 0.0f }; 
-        Vertex tl = { -1.0f, 1.0f, 0.0f, h };
-        Vertex tr = { 1.0f, 1.0f, w, h };
-        Vertex vertices[] = {
-            bl, tl, tr, 
-            tr, br, bl
-        };
+    Vertex bl = { -1.0f, -1.0f, 0.0f, 0.0f };
+    Vertex br = { 1.0f, -1.0f, w, 0.0f }; 
+    Vertex tl = { -1.0f, 1.0f, 0.0f, h };
+    Vertex tr = { 1.0f, 1.0f, w, h };
+    Vertex vertices[] = {
+        bl, tl, tr, 
+        tr, br, bl
+    };
 
-        gl()->glGenBuffers(1, &triangle_vbo);
-        gl()->glGenVertexArrays(1, &triangle_vao);
+    gl()->glGenBuffers(1, &triangle_vbo);
+    gl()->glGenVertexArrays(1, &triangle_vao);
 
-        gl()->glBindVertexArray(triangle_vao);
-        gl()->glBindBuffer(GL_ARRAY_BUFFER, triangle_vbo);
-        gl()->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    gl()->glBindVertexArray(triangle_vao);
+    gl()->glBindBuffer(GL_ARRAY_BUFFER, triangle_vbo);
+    gl()->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-        GLint position_attr = renderShader.getAttributeLocation("Position");
-        gl()->glVertexAttribPointer(position_attr, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
-        gl()->glEnableVertexAttribArray(position_attr);
+    GLint position_attr = renderShader.getAttributeLocation("Position");
+    gl()->glVertexAttribPointer(position_attr, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
+    gl()->glEnableVertexAttribArray(position_attr);
 
-        GLint texcoord_attr = renderShader.getAttributeLocation("TexCoord");
-        gl()->glVertexAttribPointer(texcoord_attr, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)(2 * sizeof(float)));
-        gl()->glEnableVertexAttribArray(texcoord_attr);
+    GLint texcoord_attr = renderShader.getAttributeLocation("TexCoord");
+    gl()->glVertexAttribPointer(texcoord_attr, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)(2 * sizeof(float)));
+    gl()->glEnableVertexAttribArray(texcoord_attr);
 
 
-        //if (iter->first == "RGB" || iter->first == "registered")
-        {
-            renderShader.use();
+    renderShader.use();
 
-            rgb.allocate(frame_width, frame_height);
-            std::copy(frame_data, frame_data + frame_width * frame_height * frame_bytes_per_pixel, rgb.data);
-            rgb.flipY();
-            rgb.upload();
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+    rgb.allocate(frame_width, frame_height);
+    std::copy(frame_data, frame_data + frame_width * frame_height * frame_bytes_per_pixel, rgb.data);
+    rgb.flipY();
+    rgb.upload();
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-            rgb.deallocate();
+    rgb.deallocate();
 
-        }
-        /*else
-        {
-            renderGrayShader.use();
+    gl()->glDeleteBuffers(1, &triangle_vbo);
+    gl()->glDeleteVertexArrays(1, &triangle_vao);
+}
 
-            ir.allocate(frame->width, frame->height);
-            std::copy(frame->data, frame->data + frame->width * frame->height * frame->bytes_per_pixel, ir.data);
-            ir.flipY();
-            ir.upload();
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            ir.deallocate();
-        }*/
-
-        gl()->glDeleteBuffers(1, &triangle_vbo);
-        gl()->glDeleteVertexArrays(1, &triangle_vao);
-    //}
-
+// return true if should quit
+bool Viewer::finish() {
     // put the stuff we've been drawing onto the display
     glfwSwapBuffers(window);
     // update other events like input handling 
     glfwPollEvents();
-
     return shouldStop || glfwWindowShouldClose(window);
 }
 

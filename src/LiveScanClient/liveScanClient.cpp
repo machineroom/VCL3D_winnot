@@ -32,7 +32,6 @@ LiveScanClient::LiveScanClient() :
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
     m_nNextStatusTime(0LL),
-    m_pDrawColor(NULL),
 	m_pDepthRGBX(NULL),
 	m_pCameraSpaceCoordinates(NULL),
 	m_pColorCoordinatesOfDepth(NULL),
@@ -73,13 +72,7 @@ LiveScanClient::LiveScanClient() :
 
 	// Create and initialize a new image renderer (take a look at ImageRenderer.h)
 	// We'll use this to draw the data we receive from the Kinect to the screen
-	bool hr;
-	m_pDrawColor = new ImageRendererGLX();
-	hr = m_pDrawColor->Initialize(pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, pCapture->nColorFrameWidth * sizeof(RGB));
-	if (!hr)
-	{
-		std::cout << "GLX drawing init failed" << std::endl;
-	}
+	m_viewer.initialize();
 
 
     /*TODO port from windows
@@ -101,12 +94,6 @@ LiveScanClient::LiveScanClient() :
   
 LiveScanClient::~LiveScanClient()
 {
-    // clean up Direct2D renderer
-    if (m_pDrawColor)
-    {
-        delete m_pDrawColor;
-        m_pDrawColor = NULL;
-    }
 
 	if (pCapture)
 	{
@@ -216,12 +203,18 @@ void LiveScanClient::UpdateFrame()
 	}
 
 	//locally render either the depth or colour buffers
-	//TODO in the Windows build this flag controlled via a GUI button
-	if (!m_bShowDepth)
+	//TODO in the Windows build this flag controlled via a GUI button. In Linux/GLX show both
+	/*if (!m_bShowDepth)
 		ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
 	else
 		ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
-
+	*/
+	m_viewer.start();
+	ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
+//TODO relies on some unimplemented mapping code	ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
+	if (m_viewer.finish()) {
+		exit(0);
+	}
 	ShowFPS();
 }
 
@@ -254,7 +247,7 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight
 		}
 
 		// Draw the data
-		m_pDrawColor->Draw(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB));
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), true);
 	}
 }
 
@@ -264,7 +257,7 @@ void LiveScanClient::ProcessColor(RGB* pBuffer, int nWidth, int nHeight)
 	if (pBuffer && (nWidth == pCapture->nColorFrameWidth) && (nHeight == pCapture->nColorFrameHeight))
     {
         // Draw the data
-		m_pDrawColor->Draw(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth * pCapture->nColorFrameHeight * sizeof(RGB));
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), false);
     }
 }
 

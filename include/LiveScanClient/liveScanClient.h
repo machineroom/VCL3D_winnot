@@ -14,8 +14,7 @@
 //    }
 #pragma once
 
-//#include "resource.h"
-#include "imageRendererGLX.h"
+#include "viewer.h"
 
 #include "socketCS.h"
 #include "calibration.h"
@@ -90,7 +89,7 @@ private:
 	Point2f* m_pColorCoordinatesOfDepth;
 	Point2f* m_pDepthCoordinatesOfColor;
 
-    ImageRendererGLX* m_pDrawColor;
+    Viewer m_viewer;
 	RGB* m_pDepthRGBX;
 
 	void UpdateFrame();

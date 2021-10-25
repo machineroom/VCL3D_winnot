@@ -272,11 +272,14 @@ private:
     Texture<F32C1> ir;
     int win_width;
     int win_height;
+	bool render(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel);
 public:
     Viewer();
     void initialize();
+    void start(void);
+	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel, bool depth);
+    bool finish(void);
     virtual void onOpenGLBindingsChanged(OpenGLBindings *b);
-	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel);
     void addFrame(std::string id,libfreenect2::Frame* frame);
     void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void winsize_callback(GLFWwindow* window, int w, int h);
