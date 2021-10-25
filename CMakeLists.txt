@@ -9,6 +9,7 @@ pkg_check_modules(OPENCV REQUIRED opencv4)
 pkg_check_modules(ZSTD REQUIRED libzstd)
 #pkg_check_modules(NANOFLANN REQUIRED nanoflann)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
+pkg_check_modules(FREENECT2 REQUIRED freenect2)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -19,6 +20,7 @@ include_directories(${OPENCV_INCLUDE_DIRS})
 include_directories(${ZSTD_INCLUDE_DIRS})
 include_directories(${NANOFLANN_INCLUDE_DIRS})
 include_directories(${FREENECT_INCLUDE_DIRS})
+include_directories(${FREENECT2_INCLUDE_DIRS})
 
 link_directories(${OPENCV_LIBRARY_DIRS})
 
@@ -34,5 +36,5 @@ add_executable(client ${SOURCES})
 
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
-target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES} Threads::Threads)
+target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} ${FREENECT_LINK_LIBRARIES} ${FREENECT2_LINK_LIBRARIES} Threads::Threads)
 

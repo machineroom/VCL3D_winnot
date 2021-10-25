@@ -56,11 +56,15 @@ LiveScanClient::LiveScanClient() :
 	m_nFilterNeighbors(10),
 	m_fFilterThreshold(0.01f)
 {
-	#ifdef KINECT
+#ifdef KINECT
 	pCapture = new KinectCapture();
-	#else
+#else
+  #ifdef FREENECT1
 	pCapture = new FreenectCapture();
-	#endif
+  #else
+	pCapture = new Freenect2Capture();
+  #endif
+#endif
 	pCapture->Initialize();
 	m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
 

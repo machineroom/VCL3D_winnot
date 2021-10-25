@@ -4,8 +4,10 @@ James' code currently uses freenect v1 which supports the xbox Kinect v1 (xbox 3
 
 Special stuff
 - Linux: may need to run client as root to access usb device
+ - Install libfreenect2 from source and set PKG_CONFIG_PATH if installed locally before running cmake
 - Mac: export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
-
+- Build with cmake in usual way (cd build; cmake ..)
+ 
 Useful stuff
 - https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 - http://www.bryancook.net/2014/03/mapping-between-kinect-color-and-depth.html
