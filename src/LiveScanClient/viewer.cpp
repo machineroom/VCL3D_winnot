@@ -153,7 +153,8 @@ void Viewer::start()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, bool depth)
+//botom,right control placement in 2*2 grid
+bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos)
 {
 
     int fb_width, fb_width_half, fb_height, fb_height_half;
@@ -163,12 +164,22 @@ bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_heigh
     fb_width_half = (fb_width + 1) / 2;
     fb_height_half = (fb_height + 1) / 2;
 
-	//TODO could be much nicer.... (position depth to the right of colour)
-	if (depth) {
-	    glViewport(fb_width_half, 0, fb_width_half, fb_height_half);
-	} else {
-	    glViewport(0, 0, fb_width_half, fb_height_half);
+	int x,y;
+	switch (pos) {
+		case TOP_LEFT:
+			x=0; y=fb_height_half;
+			break;
+		case TOP_RIGHT:
+			x=fb_width_half; y=fb_height_half;
+			break;
+		case BOTTOM_LEFT:
+			x=0; y=0;
+			break;
+		case BOTTOM_RIGHT:
+			x=fb_width_half; y=0;
+			break;
 	}
+    glViewport(x, y, fb_width_half, fb_height_half);
 
     float w = static_cast<float>(frame_width);
     float h = static_cast<float>(frame_height);

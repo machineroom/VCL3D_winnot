@@ -260,6 +260,14 @@ struct ShaderProgram : public WithOpenGLBindings
     }
 };
 
+enum Position {
+	TOP_LEFT,
+	TOP_RIGHT,
+	BOTTOM_LEFT,
+	BOTTOM_RIGHT
+};
+
+
 class Viewer : WithOpenGLBindings {
 private:
     bool shouldStop;
@@ -277,7 +285,7 @@ public:
     Viewer();
     void initialize();
     void start(void);
-	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel, bool depth);
+	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos);
     bool finish(void);
     virtual void onOpenGLBindingsChanged(OpenGLBindings *b);
     void addFrame(std::string id,libfreenect2::Frame* frame);

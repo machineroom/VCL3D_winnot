@@ -247,7 +247,7 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight
 		}
 
 		// Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), true);
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_LEFT);
 	}
 }
 
@@ -257,7 +257,7 @@ void LiveScanClient::ProcessColor(RGB* pBuffer, int nWidth, int nHeight)
 	if (pBuffer && (nWidth == pCapture->nColorFrameWidth) && (nHeight == pCapture->nColorFrameHeight))
     {
         // Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), false);
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);
     }
 }
 
