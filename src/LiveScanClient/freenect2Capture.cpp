@@ -86,14 +86,15 @@ bool Freenect2Capture::Initialize()
 	}
 
 	/// [listeners]
-	int types = libfreenect2::Frame::Color | libfreenect2::Frame::Depth;
+	//TODO is IR required?
+	int types = libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
 	listener = new libfreenect2::SyncMultiFrameListener (types);
 
 	dev->setColorFrameListener (listener);
 	dev->setIrAndDepthFrameListener(listener);
 
 
-	/// [start]
+	/// [start all streams (rgb & depth)]
     if (!dev->start()) {
 		std::cout << "failure starting device!" << std::endl;
 		return false;
@@ -118,6 +119,18 @@ bool Freenect2Capture::AcquireFrame()
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
     std::cout << "frame!" << std::endl;
 
+	/** Map color images onto depth images
+	* @param rgb Color image (1920x1080 BGRX)
+	* @param depth Depth image (512x424 float)
+	* @param[out] undistorted Undistorted depth image (JW note 512x424 float mm)
+	* @param[out] registered Color image for the depth image (JW note 512x424 ARGB)
+	* @param enable_filter Filter out pixels not visible to both cameras.
+	* @param[out] bigdepth If not `NULL`, return mapping of depth onto colors (c float). **1082** not 1080, with a blank top and bottom row.
+	* @param[out] color_depth_map Index of mapped color pixel for each depth pixel (512x424).
+	*/
+  	//void apply(const Frame* rgb, const Frame* depth, Frame* undistorted, Frame* registered, const bool enable_filter = true, Frame* bigdepth = 0, int* color_depth_map = 0) const;
+	registration->apply(rgb, depth, undistorted, registered);
+
 	//copy frame data into our buffers so livescan can process it
 	//TODO check dimensions won't overwrite our buffer
 	memcpy (pColorRGBX, rgb->data, rgb->width * rgb->height * rgb->bytes_per_pixel);
@@ -126,11 +139,13 @@ bool Freenect2Capture::AcquireFrame()
 	long pixelCounter = 0;
 	for (int y=0; y < depth->height; y++) {
 		for (int x=0; x < depth->width; x++) {
-			pDepth[pixelCounter] = depth->data[pixelCounter];
+			pDepth[pixelCounter] = (UINT16)depth->data[pixelCounter];
 			pixelCounter++;
 		}
 	}
-	registration->apply(rgb, depth, undistorted, registered);
+
+
+	//now that we've taken a copy of the data the freenect2 buffers can be released
     listener->release(frames);
 
 	return true;
@@ -207,7 +222,7 @@ void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 			float x, y, z;
  		  /* freenect2 getPointXYZ doc states:
  		    Construct a 3-D point in a point cloud.
-		   * @param undistorted Undistorted depth frame from apply().
+		   * @param undistorted Undistorted depth frame from getPointXYZ().
 		   * @param r Row (y) index in depth image.
 		   * @param c Column (x) index in depth image.
 		   * @param[out] x X coordinate of the 3-D point (meter).

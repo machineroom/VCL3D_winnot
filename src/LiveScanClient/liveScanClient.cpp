@@ -210,23 +210,21 @@ void LiveScanClient::UpdateFrame()
 		ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
 	*/
 	m_viewer.start();
-	ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
-	ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
+	ProcessColor(pCapture->pColorRGBX);
+	ProcessDepth(pCapture->pDepth);
 	if (m_viewer.finish()) {
 		exit(0);
 	}
 	ShowFPS();
 }
 
-
-void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight)
+// pBuffer - pointer to depth buffer (512x424 short mm)
+// m_pDepthCoordinatesOfColor is colour resolution (1920x1080 XY coord of pixel in depth image corresponding to pixel in colour image)
+void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 {
 	// Make sure we've received valid data
-	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pBuffer && (nWidth == pCapture->nDepthFrameWidth) && (nHeight == pCapture->nDepthFrameHeight))
+	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pBuffer)
 	{
-		// end pixel is start + width*height - 1
-		const UINT16* pBufferEnd = pBuffer + (nWidth * nHeight);
-
 		pCapture->MapColorFrameToDepthSpace(m_pDepthCoordinatesOfColor);
 
 		for (int i = 0; i < pCapture->nColorFrameWidth * pCapture->nColorFrameHeight; i++)
@@ -251,10 +249,10 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer, int nWidth, int nHeight
 	}
 }
 
-void LiveScanClient::ProcessColor(RGB* pBuffer, int nWidth, int nHeight) 
+void LiveScanClient::ProcessColor(RGB* pBuffer)
 {
     // Make sure we've received valid data
-	if (pBuffer && (nWidth == pCapture->nColorFrameWidth) && (nHeight == pCapture->nColorFrameHeight))
+	if (pBuffer)
     {
         // Draw the data
 		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);

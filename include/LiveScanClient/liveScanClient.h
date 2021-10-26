@@ -93,8 +93,8 @@ private:
 	RGB* m_pDepthRGBX;
 
 	void UpdateFrame();
-    void ProcessColor(RGB* pBuffer, int nWidth, int nHeight);
-	void ProcessDepth(const UINT16* pBuffer, int nHeight, int nWidth);
+    void ProcessColor(RGB* pBuffer);
+	void ProcessDepth(const UINT16* pBuffer);
 
     bool SetStatusMessage(WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
 
