@@ -121,7 +121,7 @@ bool Freenect2Capture::AcquireFrame()
 
 	/** Map color images onto depth images
 	* @param rgb Color image (1920x1080 BGRX)
-	* @param depth Depth image (512x424 float)
+	* @param depth Depth image (512x424 float mm)
 	* @param[out] undistorted Undistorted depth image (JW note 512x424 float mm)
 	* @param[out] registered Color image for the depth image (JW note 512x424 ARGB)
 	* @param enable_filter Filter out pixels not visible to both cameras.
@@ -176,40 +176,41 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 			out->X = x*1000.0f;
 			out->Y = y*1000.0f;
 			out->Z = z*1000.0f;
+			out++;
 		}	
 	}	
 }
 
 // mapping between depth pixel coordinates to the corresponding pixel in the color image
 // TODO freenect2 provides the mapping functions that livescan needs so this can be heavily optimised - but the current iCapture interface isn't flexible enough
+// pColorSpacePoints is 512x424 X,Y pairs
 void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
-	//MS Kinect ColorSpacePoint { float X, Y; };
+	//MS Kinect ColorSpacePoint = Point2f = { float X, Y }
 	Point2f *out = pColorSpacePoints;
 	for (int row=0; row < nDepthFrameHeight; row++) {
 		for (int col=0; col < nDepthFrameWidth; col++) {
-			float x, y, z;
-			registration->getPointXYZ (undistorted, row, col, x, y, z);
- 		  	/* freenect2 getPointXYZ doc states:
-			/** Undistort and register a single depth point to color camera.
-			   * @param dx Distorted depth coordinate x (pixel)
-			   * @param dy Distorted depth coordinate y (pixel)
-			   * @param dz Depth value (millimeter)
-			   * @param[out] cx Undistorted color coordinate x (normalized)
-			   * @param[out] cy Undistorted color coordinate y (normalized)
-			   */
-			   
-			if (std::isnan(x) || std::isnan(y) || std::isnan(z)) {
-				out->X = NAN;
+			float cx, cy;
+		    /** Undistort and register a single depth point to color camera.
+		     * @param dx Distorted depth coordinate x (pixel)
+  		     * @param dy Distorted depth coordinate y (pixel)
+	  	     * @param dz Depth value (millimeter)
+		     * @param[out] cx Undistorted color coordinate x (normalized)
+		     * @param[out] cy Undistorted color coordinate y (normalized)
+  		  	 void apply(int dx, int dy, float dz, float& cx, float &cy) const;
+		     */
+  		  	//TODO is use of undistorted correct here? since apply expects distored coords
+		  	registration->apply (col, row, undistorted->data[row*nDepthFrameWidth+col], cx, cy);
+		  	if (std::isnan(cx) || std::isinf(cx) || std::isnan(cy) || std::isinf(cy)) {
+		  		out->X = NAN;
 				out->Y = NAN;
-			} else {
-	  			float cx, cy;	//color coords
-				registration->apply (x,y,z,cx,cy);
-				out->X = cx;
-				out->Y = cy;
-			}
-		}	
+    	    } else {
+		  		out->X = cx;
+		  		out->Y = cy;
+			}	
+	  		out++;
+	  	}
 	}	
 }
 
