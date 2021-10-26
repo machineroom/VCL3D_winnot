@@ -95,6 +95,7 @@ private:
 	void UpdateFrame();
     void ProcessColor(RGB* pBuffer);
 	void ProcessDepth(const UINT16* pBuffer);
+	void ShowRawDepth();
 
     bool SetStatusMessage(WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
 

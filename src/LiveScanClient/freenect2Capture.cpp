@@ -140,6 +140,7 @@ bool Freenect2Capture::AcquireFrame()
 	for (int y=0; y < depth->height; y++) {
 		for (int x=0; x < depth->width; x++) {
 			pDepth[pixelCounter] = (UINT16)depth->data[pixelCounter];
+			pDepth[pixelCounter] = y*256;	//TEMP!!!!
 			pixelCounter++;
 		}
 	}
@@ -235,10 +236,12 @@ void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 			out->X = x*1000.0f;
 			out->Y = y*1000.0f;
 			out->Z = z*1000.0f;
+			out++;
 		}	
 	}	
 }
 
+// pDepthSpacePoints is colour resolution (1920x1080) and gets filled with XY coord of pixel in depth image corresponding to pixel in colour image
 void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
 	// TODO maybe? like seriously I have no idea.
@@ -265,6 +268,7 @@ void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 				out->X = cx;
 				out->Y = cy;
 			}
+			out++;
 		}	
 	}	
 }

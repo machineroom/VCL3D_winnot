@@ -19,6 +19,11 @@
 #include <fstream>
 #include <zstd.h>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+
 std::mutex m_mSocketThreadMutex;
 
 int main (int argc, char **argv)
@@ -211,7 +216,8 @@ void LiveScanClient::UpdateFrame()
 	*/
 	m_viewer.start();
 	ProcessColor(pCapture->pColorRGBX);
-	ProcessDepth(pCapture->pDepth);
+	ShowRawDepth();
+	//ProcessDepth(pCapture->pDepth);
 	if (m_viewer.finish()) {
 		exit(0);
 	}
@@ -219,9 +225,10 @@ void LiveScanClient::UpdateFrame()
 }
 
 // pBuffer - pointer to depth buffer (512x424 short mm)
-// m_pDepthCoordinatesOfColor is colour resolution (1920x1080 XY coord of pixel in depth image corresponding to pixel in colour image)
 void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 {
+	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function
+	// m_pDepthCoordinatesOfColor: 1920x1080 XY coord of pixel in depth image corresponding to pixel in colour image
 	// Make sure we've received valid data
 	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pBuffer)
 	{
@@ -235,7 +242,7 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 			if (depthPoint.X >= 0 && depthPoint.Y >= 0)
 			{
 				int depthIdx = (int)(depthPoint.X + depthPoint.Y * pCapture->nDepthFrameWidth);
-				USHORT depth = pBuffer[depthIdx];
+				UINT16 depth = pBuffer[depthIdx];
 				intensity = static_cast<BYTE>(depth % 256);
 			}
 
@@ -247,6 +254,50 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 		// Draw the data
 		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_LEFT);
 	}
+}
+
+// Show the raw depth buffer recieved (depth in mm mapped to greyscale)
+void LiveScanClient::ShowRawDepth()
+{
+	// get 16 bit depth into 8 bit greyscale for opencv
+	cv::Mat img_in (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_16U, pCapture->pDepth);
+    cv::Mat downsampled;
+	img_in.convertTo(downsampled, CV_8UC1, 1 / 256.0);
+	
+    cv::Mat img_color (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_8UC4);
+    cv::applyColorMap(downsampled, img_color, cv::COLORMAP_JET);
+   	//cv::imshow("",img_color);
+	//cv::waitKey(0);
+   	// Draw the data
+   	RGB data[512*424];
+   	RGB *dp = data;
+   	for (int y=0; y < 424; y++) {
+   		for (int x=0; x < 512; x++) {
+			uchar b = img_color.data[img_color.channels()*(img_color.cols*y + x) + 0];    
+			uchar g = img_color.data[img_color.channels()*(img_color.cols*y + x) + 1];
+			uchar r = img_color.data[img_color.channels()*(img_color.cols*y + x) + 2];
+   			dp->rgbRed = r;
+   			dp->rgbGreen = g;
+   			dp->rgbBlue = b;
+   			dp++;
+   		}
+   	}
+	//m_viewer.render_colour(&img_color.data[img_color.channels()], img_color.cols, img_color.rows, sizeof(RGB), TOP_LEFT);
+	m_viewer.render_colour((uint8_t *)data, img_color.cols, img_color.rows, sizeof(RGB), TOP_LEFT);
+
+/*	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function (but we only use a 512x424 area of it)
+	for (int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
+	{
+		BYTE intensity = 0;
+		UINT16 depth = pCapture->pDepth[i];
+		intensity = static_cast<BYTE>(depth % 256);
+
+		m_pDepthRGBX[i].rgbRed = intensity;
+		m_pDepthRGBX[i].rgbGreen = intensity;
+		m_pDepthRGBX[i].rgbBlue = intensity;
+	}
+	// Draw the data
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_LEFT);*/
 }
 
 void LiveScanClient::ProcessColor(RGB* pBuffer)
