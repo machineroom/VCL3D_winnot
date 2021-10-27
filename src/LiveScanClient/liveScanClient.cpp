@@ -28,12 +28,15 @@ std::mutex m_mSocketThreadMutex;
 
 int main (int argc, char **argv)
 {
-    LiveScanClient application;
-    application.m_bCalibrate = true;	//for local testing
+	std::string kinectSerial = "";	//TODO get from cmd line args
+    LiveScanClient application (kinectSerial);
+    application.m_bCalibrate = true;	//for local testing TODO get from cmnd line
     application.Run();
 }
 
-LiveScanClient::LiveScanClient() :
+LiveScanClient::LiveScanClient() : LiveScanClient::LiveScanClient("") {}
+
+LiveScanClient::LiveScanClient(std::string kinectSerial) :
     m_nLastCounter(0),
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
@@ -57,7 +60,8 @@ LiveScanClient::LiveScanClient() :
 	m_iCompressionLevel(2),
 	m_pClientSocket(NULL),
 	m_nFilterNeighbors(10),
-	m_fFilterThreshold(0.01f)
+	m_fFilterThreshold(0.01f),
+	m_sKinectSerial(kinectSerial)
 {
 
 #ifdef KINECT
@@ -69,7 +73,7 @@ LiveScanClient::LiveScanClient() :
 	pCapture = new Freenect2Capture();
   #endif
 #endif
-	pCapture->Initialize();
+	pCapture->Initialize(m_sKinectSerial);
 	m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
 
 	m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
@@ -219,6 +223,7 @@ void LiveScanClient::UpdateFrame()
 	ProcessColor();
 	ShowRawDepth();
 	ProcessDepth();
+	ShowStatus();
 	if (m_viewer.finish()) {
 		exit(0);
 	}
@@ -309,6 +314,44 @@ void LiveScanClient::ProcessColor()
         // Draw the data
 		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pCapture->pColorRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);
     }
+}
+
+// A simple text window to show client status
+void LiveScanClient::ShowStatus() {
+	std::vector<cv::String> strings;
+	if (m_bCalibrate) {
+		strings.push_back("calibrating");
+	}
+	strings.push_back(pCapture->Identifier());
+	cv::Mat mat (512,512,CV_8UC3);
+	mat = cv::Scalar(0,0,0);
+	cv::Point position(0,50);
+   	// Draw the text
+   	for (auto &s: strings) {
+        //std::cout << s << std::endl;
+        int face = cv::FONT_HERSHEY_DUPLEX;
+        int scale = 1;
+        int thickness = 1;
+	   	//cv::putText (InputOutputArray img, const String &text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false)
+	   	cv::putText(mat, s, position, face, scale, cv::Scalar(255,0,0), thickness);
+	   	int baseline;
+	   	//cv::getTextSize (const String &text, int fontFace, double fontScale, int thickness, int *baseLine)
+	   	cv::Size textSize = cv::getTextSize (s, face, scale, thickness, &baseline);
+	   	position.y += textSize.height*1.2;
+    }
+   	
+   	//re-use the (larger) colour buffer
+   	//TODO optimise this! (we shouldn't need to do pixel level fetch from opencv Mat)
+   	RGB *dp = m_pDepthRGBX;
+   	for (int y=0; y < 424; y++) {
+   		for (int x=0; x < 512; x++) {
+			dp->rgbBlue = mat.data[mat.channels()*(mat.cols*y + x) + 0];    
+			dp->rgbGreen = mat.data[mat.channels()*(mat.cols*y + x) + 1];
+			dp->rgbRed = mat.data[mat.channels()*(mat.cols*y + x) + 2];
+   			dp++;
+   		}
+   	}
+	m_viewer.render_colour((uint8_t *)m_pDepthRGBX, mat.cols, mat.rows, sizeof(RGB), BOTTOM_RIGHT);
 }
 
 	/* TODO port from windows

@@ -44,11 +44,13 @@ Freenect2Capture::~Freenect2Capture()
 	dev->stop();
 	dev->close();
 }
-
 bool Freenect2Capture::Initialize()
 {
-	std::string serial = "";
-		
+	Initialize("");
+}
+
+bool Freenect2Capture::Initialize(std::string serial)
+{
 	std::cout << "freenect2 init" << std::endl;
 
     //TODO do we need to override the default pipeline? if so do it now.
@@ -67,7 +69,9 @@ bool Freenect2Capture::Initialize()
 	}
 
 	//todo support >1 kinect
-	serial = freenect2.getDefaultDeviceSerialNumber();
+	if (serial == "") {
+		serial = freenect2.getDefaultDeviceSerialNumber();
+	}
 	
 	if(pipeline)
 	{
@@ -105,6 +109,10 @@ bool Freenect2Capture::Initialize()
 	bInitialized = true;
 
 	return bInitialized;
+}
+
+std::string Freenect2Capture::Identifier() {
+	return "s " + dev->getSerialNumber() + " f " + dev->getFirmwareVersion();
 }
 
 bool Freenect2Capture::AcquireFrame()

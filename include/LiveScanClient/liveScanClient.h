@@ -42,6 +42,7 @@ class LiveScanClient
 {
 public:
     LiveScanClient();
+    LiveScanClient(std::string kinectSerial);
     ~LiveScanClient();
 
 
@@ -50,6 +51,7 @@ public:
 	bool m_bSocketThread;
 	bool m_bCalibrate;
 private:
+	std::string m_sKinectSerial;
 	Calibration calibration;
 
 	bool m_bFilter;
@@ -114,5 +116,6 @@ private:
 	void StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color);
 #endif
 	void ShowFPS();
+	void ShowStatus();
 };
 

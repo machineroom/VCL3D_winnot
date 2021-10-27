@@ -30,11 +30,13 @@ public:
 	~Freenect2Capture();
 
 	bool Initialize();
+	bool Initialize(std::string serial);	//serial is hex string serial number of kinect
 	bool AcquireFrame();
 	void MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints);
 	void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints);
 	void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints);
 	void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints);
+	std::string Identifier();
 private:
 	libfreenect2::Freenect2 freenect2;
 	libfreenect2::Freenect2Device *dev = 0;

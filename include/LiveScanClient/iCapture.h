@@ -47,11 +47,13 @@ public:
 	~ICapture();
 
 	virtual bool Initialize() = 0;
+	virtual bool Initialize(std::string serial) = 0;
 	virtual bool AcquireFrame() = 0;
 	virtual void MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints) = 0;
 	virtual void MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints) = 0;
 	virtual void MapDepthFrameToColorSpace(Point2f *pColorSpacePoints) = 0;
 	virtual void MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints) = 0;
+	virtual std::string Identifier() = 0;	// return some unique identifier of this device for diagnostics (e.g. serial #)
 
 	bool bInitialized;
 
