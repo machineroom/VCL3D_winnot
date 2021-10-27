@@ -29,14 +29,13 @@ std::mutex m_mSocketThreadMutex;
 int main (int argc, char **argv)
 {
 	std::string kinectSerial = "";	//TODO get from cmd line args
-    LiveScanClient application (kinectSerial);
+	std::string server = "localhost";	//TODO get from cmd line args
+    LiveScanClient application (kinectSerial, server);
     application.m_bCalibrate = true;	//for local testing TODO get from cmnd line
     application.Run();
 }
 
-LiveScanClient::LiveScanClient() : LiveScanClient::LiveScanClient("") {}
-
-LiveScanClient::LiveScanClient(std::string kinectSerial) :
+LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server) :
     m_nLastCounter(0),
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
@@ -61,8 +60,17 @@ LiveScanClient::LiveScanClient(std::string kinectSerial) :
 	m_pClientSocket(NULL),
 	m_nFilterNeighbors(10),
 	m_fFilterThreshold(0.01f),
-	m_sKinectSerial(kinectSerial)
+	m_sKinectSerial(kinectSerial),
+	m_sServer(server)
 {
+	try {
+		m_pClientSocket = new SocketClient(m_sServer, 48001);
+		m_bConnected = true;
+	} 					
+	catch (...) {
+		std::cout << "Failed server connection" << std::endl;
+	}
+
 
 #ifdef KINECT
 	pCapture = new KinectCapture();
@@ -321,8 +329,16 @@ void LiveScanClient::ShowStatus() {
 	std::vector<cv::String> strings;
 	if (m_bCalibrate) {
 		strings.push_back("calibrating");
+	} else {
+		strings.push_back("not calibrating");
 	}
 	strings.push_back(pCapture->Identifier());
+	strings.push_back (m_sServer);
+	if (m_bConnected) {
+		strings.push_back("connected");
+	} else {
+		strings.push_back("not connected");
+	}
 	cv::Mat mat (512,512,CV_8UC3);
 	mat = cv::Scalar(0,0,0);
 	cv::Point position(0,50);

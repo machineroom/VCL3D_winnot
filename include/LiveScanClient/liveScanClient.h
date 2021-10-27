@@ -41,10 +41,8 @@ typedef uint16_t USHORT;
 class LiveScanClient
 {
 public:
-    LiveScanClient();
-    LiveScanClient(std::string kinectSerial);
+    LiveScanClient(std::string kinectSerial, std::string server);
     ~LiveScanClient();
-
 
     int                     Run();
 
@@ -52,6 +50,7 @@ public:
 	bool m_bCalibrate;
 private:
 	std::string m_sKinectSerial;
+	std::string m_sServer;
 	Calibration calibration;
 
 	bool m_bFilter;

@@ -7,7 +7,6 @@ project(LiveScanClient)
 
 pkg_check_modules(OPENCV REQUIRED opencv4)
 pkg_check_modules(ZSTD REQUIRED libzstd)
-#pkg_check_modules(NANOFLANN REQUIRED nanoflann)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
 pkg_check_modules(FREENECT2 REQUIRED freenect2)
 pkg_check_modules(GLFW3 REQUIRED glfw3)
@@ -36,14 +35,14 @@ list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/LiveScanClient/kinectCa
 
 list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/socketCS.cpp)
 
-    LIST(APPEND RESOURCES
-      src/LiveScanClient/shader/debug.fs
-      src/LiveScanClient/shader/default.vs
-      src/LiveScanClient/shader/filter1.fs
-      src/LiveScanClient/shader/filter2.fs
-      src/LiveScanClient/shader/stage1.fs
-      src/LiveScanClient/shader/stage2.fs
-    )
+LIST(APPEND RESOURCES
+  src/LiveScanClient/shader/debug.fs
+  src/LiveScanClient/shader/default.vs
+  src/LiveScanClient/shader/filter1.fs
+  src/LiveScanClient/shader/filter2.fs
+  src/LiveScanClient/shader/stage1.fs
+  src/LiveScanClient/shader/stage2.fs
+)
 
 add_executable(client ${SOURCES})
 
