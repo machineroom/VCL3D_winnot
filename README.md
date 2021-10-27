@@ -1,17 +1,23 @@
-James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of github.com:MarekKowalski/LiveScan3D.git  
+James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of github.com:MarekKowalski/LiveScan3D.git (JUST the client)
 Started from the master branch. We might want to re-sync with the AzureKinect branch.  
-James' code currently uses freenect v1 which supports the xbox Kinect v1 (xbox 360) hardware. The original (Marek) Kinect integration is built for Kinect v2 (xbox one)
+Uses freenect2 to talk to the xbox one kinect (aka kinect2)  
+
 
 Special stuff
 - Linux: may need to run client as root to access usb device
- - Install libfreenect2 from source and set PKG_CONFIG_PATH if installed locally before running cmake
+  - Install libfreenect2 from source and set PKG_CONFIG_PATH if installed locally before running cmake
 - Mac: export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
-- Build with cmake in usual way (cd build; cmake ..)
+- Build with cmake in usual way (cd build; cmake ..; make)
  
 Useful stuff
 - https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 - http://www.bryancook.net/2014/03/mapping-between-kinect-color-and-depth.html
 
+Running livescan server on Linux:
+ - Follow steps [here](https://www.dedoimedo.com/computers/wine-dotnet-mono.html) to install wine (tested on Ubuntu 21.04). Install mono-complete, winetricks, etc.
+ - Build the code (probably on windows) or grab exe from [github release](https://github.com/MarekKowalski/LiveScan3D/releases/tag/v1.0.1)
+ - wine LiveScanServer.exe
+ 
 
 # LiveScan3D #
 LiveScan3D is a system designed for real time 3D reconstruction using multiple AzureKinect or Kinect v2 depth sensors simultaneously at real time speed. The code for working with Kinect v2 is in the master branch, and the v1.x.x releases. If you want to work with Azure Kinect please use the appropriately named branch.
