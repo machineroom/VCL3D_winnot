@@ -31,7 +31,7 @@ int main (int argc, char **argv)
 	std::string kinectSerial = "";	//TODO get from cmd line args
 	std::string server = "localhost";	//TODO get from cmd line args
     LiveScanClient application (kinectSerial, server);
-    application.m_bCalibrate = true;	//for local testing TODO get from cmnd line
+    //application.m_bCalibrate = true;	//for local testing TODO get from cmnd line
     application.Run();
 }
 
