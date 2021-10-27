@@ -256,48 +256,48 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 	}
 }
 
+
+//#define GREY_SCALE_DEPTH
 // Show the raw depth buffer recieved (depth in mm mapped to greyscale)
 void LiveScanClient::ShowRawDepth()
 {
-	// get 16 bit depth into 8 bit greyscale for opencv
-	cv::Mat img_in (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_16U, pCapture->pDepth);
-    cv::Mat downsampled;
-	img_in.convertTo(downsampled, CV_8UC1, 1 / 256.0);
-	
-    cv::Mat img_color (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_8UC4);
-    cv::applyColorMap(downsampled, img_color, cv::COLORMAP_JET);
-   	//cv::imshow("",img_color);
-	//cv::waitKey(0);
-   	// Draw the data
-   	RGB data[512*424];
-   	RGB *dp = data;
-   	for (int y=0; y < 424; y++) {
-   		for (int x=0; x < 512; x++) {
-			uchar b = img_color.data[img_color.channels()*(img_color.cols*y + x) + 0];    
-			uchar g = img_color.data[img_color.channels()*(img_color.cols*y + x) + 1];
-			uchar r = img_color.data[img_color.channels()*(img_color.cols*y + x) + 2];
-   			dp->rgbRed = r;
-   			dp->rgbGreen = g;
-   			dp->rgbBlue = b;
-   			dp++;
-   		}
-   	}
-	//m_viewer.render_colour(&img_color.data[img_color.channels()], img_color.cols, img_color.rows, sizeof(RGB), TOP_LEFT);
-	m_viewer.render_colour((uint8_t *)data, img_color.cols, img_color.rows, sizeof(RGB), TOP_LEFT);
-
-/*	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function (but we only use a 512x424 area of it)
+	//pCapture->pDepth is 16 bit samples representing mm distance. Range ~500-4500mm (https://docs.depthkit.tv/docs/kinect-for-windows-v2)
+#ifdef GREY_SCALE_DEPTH
 	for (int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
 	{
 		BYTE intensity = 0;
 		UINT16 depth = pCapture->pDepth[i];
-		intensity = static_cast<BYTE>(depth % 256);
+		intensity = static_cast<BYTE>(depth);
 
 		m_pDepthRGBX[i].rgbRed = intensity;
 		m_pDepthRGBX[i].rgbGreen = intensity;
 		m_pDepthRGBX[i].rgbBlue = intensity;
 	}
 	// Draw the data
-	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_LEFT);*/
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_LEFT);
+#else
+	cv::Mat depth_mm (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_16UC1, pCapture->pDepth);
+    cv::Mat downsampled;
+	//colour mapping needs 8 bit data so we scale. Divide by 16 (4500/256~=18).
+	// get 16 bit depth into 8 bit greyscale for opencv
+	depth_mm.convertTo(downsampled, CV_8UC1, 1 / 18.0);
+	
+    cv::Mat img_color (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_8UC3);
+    cv::applyColorMap(downsampled, img_color, cv::COLORMAP_VIRIDIS);
+   	// Draw the data
+   	//re-use the (larger) colour buffer
+   	//TODO optimise this! (we shouldn't need to do pixel level fetch from opencv Mat)
+   	RGB *dp = m_pDepthRGBX;
+   	for (int y=0; y < 424; y++) {
+   		for (int x=0; x < 512; x++) {
+			dp->rgbBlue = img_color.data[img_color.channels()*(img_color.cols*y + x) + 0];    
+			dp->rgbGreen = img_color.data[img_color.channels()*(img_color.cols*y + x) + 1];
+			dp->rgbRed = img_color.data[img_color.channels()*(img_color.cols*y + x) + 2];
+   			dp++;
+   		}
+   	}
+	m_viewer.render_colour((uint8_t *)m_pDepthRGBX, img_color.cols, img_color.rows, sizeof(RGB), TOP_LEFT);
+#endif
 }
 
 void LiveScanClient::ProcessColor(RGB* pBuffer)

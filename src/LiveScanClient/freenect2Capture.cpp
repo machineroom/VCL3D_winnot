@@ -137,10 +137,10 @@ bool Freenect2Capture::AcquireFrame()
 
 	//livescan3d expects depth as shorts. freenect2 gives as floats
 	long pixelCounter = 0;
+	float *fdata = (float *)depth->data;
 	for (int y=0; y < depth->height; y++) {
 		for (int x=0; x < depth->width; x++) {
-			pDepth[pixelCounter] = (UINT16)depth->data[pixelCounter];
-			pDepth[pixelCounter] = y*256;	//TEMP!!!!
+			pDepth[pixelCounter] = (UINT16)fdata[pixelCounter];
 			pixelCounter++;
 		}
 	}
