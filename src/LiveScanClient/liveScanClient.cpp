@@ -233,6 +233,7 @@ void LiveScanClient::UpdateFrame()
 	ProcessDepth();
 	ShowStatus();
 	if (m_viewer.finish()) {
+		delete pCapture;
 		exit(0);
 	}
 	ShowFPS();

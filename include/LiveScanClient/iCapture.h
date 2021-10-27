@@ -44,7 +44,7 @@ class ICapture
 {
 public:
 	ICapture();
-	~ICapture();
+	virtual ~ICapture();
 
 	virtual bool Initialize() = 0;
 	virtual bool Initialize(std::string serial) = 0;

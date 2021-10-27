@@ -41,12 +41,13 @@ Freenect2Capture::Freenect2Capture()
 
 Freenect2Capture::~Freenect2Capture()
 {
+	std::cout << "freenect2 close" << std::endl;
 	dev->stop();
 	dev->close();
 }
 bool Freenect2Capture::Initialize()
 {
-	Initialize("");
+	return Initialize("");
 }
 
 bool Freenect2Capture::Initialize(std::string serial)
@@ -181,10 +182,16 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 		   * @param[out] z Z coordinate of the 3-D point (meter).
 		   */
 			registration->getPointXYZ (undistorted, row, col, x, y, z);
-			// convert metres to mm as expected by livescan
-			out->X = x*1000.0f;
-			out->Y = y*1000.0f;
-			out->Z = z*1000.0f;
+			if (std::isnan(x) || std::isinf(x) || std::isnan(y) || std::isinf(y) || std::isnan(z) || std::isinf(z)) {
+				out->X = 0;
+				out->Y = 0;
+				out->Z = 0;
+			} else {
+				// convert metres to mm as expected by livescan
+				out->X = x*1000.0f;
+				out->Y = y*1000.0f;
+				out->Z = z*1000.0f;
+			}
 			out++;
 		}	
 	}	
