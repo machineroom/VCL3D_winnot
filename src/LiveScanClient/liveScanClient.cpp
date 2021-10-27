@@ -224,7 +224,6 @@ void LiveScanClient::UpdateFrame()
 	ShowFPS();
 }
 
-// pBuffer - pointer to depth buffer (512x424 short mm)
 void LiveScanClient::ProcessDepth()
 {
 	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function
