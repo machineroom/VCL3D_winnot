@@ -15,7 +15,7 @@ Useful stuff
 
 Running livescan server on Linux:
  - Follow steps [here](https://www.dedoimedo.com/computers/wine-dotnet-mono.html) to install wine (tested on Ubuntu 21.04). Install mono-complete, winetricks, etc.
- - Build the code (probably on windows) or grab exe from [github release](https://github.com/MarekKowalski/LiveScan3D/releases/tag/v1.0.1)
+ - Build the server code (probably on windows) or grab exe from [github release](https://github.com/MarekKowalski/LiveScan3D/releases/tag/v1.0.1)
  - wine LiveScanServer.exe
  
 
