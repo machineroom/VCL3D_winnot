@@ -655,6 +655,15 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 			pos += sizeof(float);
 		}
 	}
+#else	//!KINECT
+	// still need to send empty bodies header
+	int nBodies = 0;
+	size += sizeof(nBodies);
+	buffer.resize(size);
+	
+	memcpy(buffer.data() + pos, &nBodies, sizeof(nBodies));
+	pos += sizeof(nBodies);
+
 #endif // KINECT
 
 	int iCompression = static_cast<int>(m_bFrameCompression);
