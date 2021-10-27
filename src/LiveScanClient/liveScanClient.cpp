@@ -215,9 +215,9 @@ void LiveScanClient::UpdateFrame()
 		ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
 	*/
 	m_viewer.start();
-	ProcessColor(pCapture->pColorRGBX);
+	ProcessColor();
 	ShowRawDepth();
-	//ProcessDepth(pCapture->pDepth);
+	ProcessDepth();
 	if (m_viewer.finish()) {
 		exit(0);
 	}
@@ -225,12 +225,12 @@ void LiveScanClient::UpdateFrame()
 }
 
 // pBuffer - pointer to depth buffer (512x424 short mm)
-void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
+void LiveScanClient::ProcessDepth()
 {
 	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function
 	// m_pDepthCoordinatesOfColor: 1920x1080 XY coord of pixel in depth image corresponding to pixel in colour image
 	// Make sure we've received valid data
-	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pBuffer)
+	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pCapture->pDepth)
 	{
 		pCapture->MapColorFrameToDepthSpace(m_pDepthCoordinatesOfColor);
 
@@ -242,7 +242,7 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 			if (depthPoint.X >= 0 && depthPoint.Y >= 0)
 			{
 				int depthIdx = (int)(depthPoint.X + depthPoint.Y * pCapture->nDepthFrameWidth);
-				UINT16 depth = pBuffer[depthIdx];
+				UINT16 depth = pCapture->pDepth[depthIdx];
 				intensity = static_cast<BYTE>(depth % 256);
 			}
 
@@ -268,7 +268,7 @@ void LiveScanClient::ShowRawDepth()
 	{
 		BYTE intensity = 0;
 		UINT16 depth = pCapture->pDepth[i];
-		intensity = static_cast<BYTE>(depth%256);
+		intensity = static_cast<BYTE>(depth);
 
 		m_pDepthRGBX[i].rgbRed = intensity;
 		m_pDepthRGBX[i].rgbGreen = intensity;
@@ -301,13 +301,13 @@ void LiveScanClient::ShowRawDepth()
 #endif
 }
 
-void LiveScanClient::ProcessColor(RGB* pBuffer)
+void LiveScanClient::ProcessColor()
 {
     // Make sure we've received valid data
-	if (pBuffer)
+	if (pCapture->pColorRGBX)
     {
         // Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pBuffer), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pCapture->pColorRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);
     }
 }
 
