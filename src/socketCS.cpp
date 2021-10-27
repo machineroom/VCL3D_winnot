@@ -78,6 +78,8 @@ std::string Socket::ReceiveBytes() {
 
       t.assign (buf, rv);
       ret += t;
+    } else {
+      break;
     }
   }
  
