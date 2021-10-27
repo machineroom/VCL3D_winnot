@@ -183,9 +183,9 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 		   */
 			registration->getPointXYZ (undistorted, row, col, x, y, z);
 			if (std::isnan(x) || std::isinf(x) || std::isnan(y) || std::isinf(y) || std::isnan(z) || std::isinf(z)) {
-				out->X = 0;
-				out->Y = 0;
-				out->Z = 0;
+				out->X = 0.f;
+				out->Y = 0.f;
+				out->Z = 0.f;
 			} else {
 				// convert metres to mm as expected by livescan
 				out->X = x*1000.0f;
@@ -219,8 +219,8 @@ void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
   		  	//TODO is use of undistorted correct here? since apply expects distored coords
 		  	registration->apply (col, row, undistorted->data[row*nDepthFrameWidth+col], cx, cy);
 		  	if (std::isnan(cx) || std::isinf(cx) || std::isnan(cy) || std::isinf(cy)) {
-		  		out->X = NAN;
-				out->Y = NAN;
+		  		out->X = 0.f;
+				out->Y = 0.f;
     	    } else {
 		  		out->X = cx;
 		  		out->Y = cy;
