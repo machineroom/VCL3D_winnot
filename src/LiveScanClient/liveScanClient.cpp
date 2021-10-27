@@ -256,18 +256,19 @@ void LiveScanClient::ProcessDepth(const UINT16* pBuffer)
 	}
 }
 
-
-//#define GREY_SCALE_DEPTH
+#define GREY_SCALE_DEPTH
 // Show the raw depth buffer recieved (depth in mm mapped to greyscale)
 void LiveScanClient::ShowRawDepth()
 {
 	//pCapture->pDepth is 16 bit samples representing mm distance. Range ~500-4500mm (https://docs.depthkit.tv/docs/kinect-for-windows-v2)
 #ifdef GREY_SCALE_DEPTH
+	//this is more accurate - though less pretty
+	// simply show the depth as grey scale intensity that wraps around every 256mm!
 	for (int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
 	{
 		BYTE intensity = 0;
 		UINT16 depth = pCapture->pDepth[i];
-		intensity = static_cast<BYTE>(depth);
+		intensity = static_cast<BYTE>(depth%256);
 
 		m_pDepthRGBX[i].rgbRed = intensity;
 		m_pDepthRGBX[i].rgbGreen = intensity;
@@ -633,7 +634,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 		if (m_bStreamOnlyBodies && bodyIndex[vertexIndex] >= bodies.size())
 			continue;
 #endif
-		if (vertices[vertexIndex].Z >= 0 && mapping[vertexIndex].Y >= 0 && mapping[vertexIndex].Y < pCapture->nColorFrameHeight)
+		if (vertices[vertexIndex].Z >= 0 && mapping[vertexIndex].Y >= 0 && mapping[vertexIndex].Y < pCapture->nColorFrameHeight && mapping[vertexIndex].X < pCapture->nColorFrameWidth)
 		{
 			Point3f temp = vertices[vertexIndex];
 			RGB tempColor = color[(int)mapping[vertexIndex].X + (int)mapping[vertexIndex].Y * pCapture->nColorFrameWidth];
