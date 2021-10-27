@@ -29,6 +29,7 @@ std::mutex m_mSocketThreadMutex;
 int main (int argc, char **argv)
 {
     LiveScanClient application;
+    application.m_bCalibrate = true;	//for local testing
     application.Run();
 }
 
@@ -175,7 +176,7 @@ void LiveScanClient::UpdateFrame()
 		//     RGB = color[mapping[v.X, v.Y]];
 		//   vertices are offset & rotated accoring to calibration
 		// vertices & RGB vectors are what's sent to the server
-
+		//TODO libfreenect2 does all this mapping so extend the iCapture interface to allow that (and future portability to realsense). Look at the azure kinect branch too for inspiration.
 #ifdef KINECT
 		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
 #else
@@ -208,7 +209,7 @@ void LiveScanClient::UpdateFrame()
 	}
 
 	//locally render either the depth or colour buffers
-	//TODO in the Windows build this flag controlled via a GUI button. In Linux/GLX show both
+	//TODO in the Windows build this flag controlled via a GUI button. In Linux/GL show both
 	/*if (!m_bShowDepth)
 		ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
 	else

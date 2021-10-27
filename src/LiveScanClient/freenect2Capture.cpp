@@ -221,21 +221,29 @@ void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 	Point3f *out = pCameraSpacePoints;
 	for (int row=0; row < nDepthFrameHeight; row++) {
 		for (int col=0; col < nDepthFrameWidth; col++) {
-			float x, y, z;
- 		  /* freenect2 getPointXYZ doc states:
- 		    Construct a 3-D point in a point cloud.
-		   * @param undistorted Undistorted depth frame from getPointXYZ().
-		   * @param r Row (y) index in depth image.
-		   * @param c Column (x) index in depth image.
-		   * @param[out] x X coordinate of the 3-D point (meter).
-		   * @param[out] y Y coordinate of the 3-D point (meter).
-		   * @param[out] z Z coordinate of the 3-D point (meter).
-		   */
-			registration->getPointXYZ (registered, row, col, x, y, z);
+			/** Construct a 3-D point with color in a point cloud.
+			   * @param undistorted Undistorted depth frame from apply().
+			   * @param registered Registered color frame from apply().
+			   * @param r Row (y) index in depth image.
+			   * @param c Column (x) index in depth image.
+			   * @param[out] x X coordinate of the 3-D point (meter).
+			   * @param[out] y Y coordinate of the 3-D point (meter).
+			   * @param[out] z Z coordinate of the 3-D point (meter).
+			   * @param[out] rgb Color of the 3-D point (BGRX). To unpack the data, use
+			   *
+			   *     const uint8_t *p = reinterpret_cast<uint8_t*>(&rgb);
+			   *     uint8_t b = p[0];
+			   *     uint8_t g = p[1];
+			   *     uint8_t r = p[2];
+			   */
+			//void getPointXYZRGB (const Frame* undistorted, const Frame* registered, int r, int c, float& x, float& y, float& z, float& rgb) const; 		  
+			float x, y, z, rgb;
+			registration->getPointXYZRGB (undistorted, registered, row, col, x, y, z, rgb);
 			// convert metres to mm as expected by livescan
 			out->X = x*1000.0f;
 			out->Y = y*1000.0f;
 			out->Z = z*1000.0f;
+			// RGB data is ignored - livescan only wants the coordinates
 			out++;
 		}	
 	}	
