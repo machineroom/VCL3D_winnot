@@ -126,7 +126,6 @@ bool Freenect2Capture::AcquireFrame()
     }
     libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
-    std::cout << "frame!" << std::endl;
 
 	/** Map color images onto depth images
 	* @param rgb Color image (1920x1080 BGRX)
@@ -166,7 +165,7 @@ bool Freenect2Capture::AcquireFrame()
 
 // for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 // mapping between depth pixel coordinates and 3D point coordinates
-// pCameraSpacePoints 512*424 {X,Y,Z}
+// pCameraSpacePoints 512*424 {X,Y,Z} in cartesian coordinate space
 void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToCameraSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (CameraSpacePoint*)pCameraSpacePoints);

@@ -337,12 +337,7 @@ void LiveScanClient::VisualiseDepthMapping()
 	{
 		Point3f vertex = m_pCameraSpaceCoordinates[i];
 		RGB c={0};
-		c.rgbBlue=255;
-		if (vertex.X > 0 && vertex.Y > 0) {
-			c.rgbBlue=0;
-			c.rgbRed =255;// = color[(int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth];
-		}
-		m_pDepthRGBX[i] = c;
+		m_pDepthRGBX[i].rgbRed = vertex.Z;	// will wrap around but good enough for debugging
 	}
 	// Draw the data
 	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_MIDDLE, "m_pCameraSpaceCoordinates");
