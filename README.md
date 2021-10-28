@@ -12,6 +12,7 @@ Special stuff
 Useful stuff
 - https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 - http://www.bryancook.net/2014/03/mapping-between-kinect-color-and-depth.html
+- Sometimes the kinect will lock-up and restarting the app won't find the device. In this case hot-plug the USB device or reset it (usbreset)
 
 Running livescan server on Linux:
  - Follow steps [here](https://www.dedoimedo.com/computers/wine-dotnet-mono.html) to install wine (tested on Ubuntu 21.04). Install mono-complete, winetricks, etc.

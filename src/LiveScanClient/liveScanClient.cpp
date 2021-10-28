@@ -31,7 +31,6 @@ int main (int argc, char **argv)
 	std::string kinectSerial = "";	//TODO get from cmd line args
 	std::string server = "localhost";	//TODO get from cmd line args
     LiveScanClient application (kinectSerial, server);
-    //application.m_bCalibrate = true;	//for local testing TODO get from cmnd line
     application.Run();
 }
 
@@ -235,8 +234,8 @@ void LiveScanClient::UpdateFrame()
 	ProcessDepth();
 	ShowStatus();
 	VisualiseDepthMapping();
-	//m_vLastFrameVertices & m_vLastFrameRGBupdated by StoreFrame
-	VisualiseVertices(m_vLastFrameVertices, m_pColorCoordinatesOfDepth, m_vLastFrameRGB);
+	//m_vLastFrameVertices set by StoreFrame
+	VisualiseVertices(m_vLastFrameVertices, m_pColorCoordinatesOfDepth);
 	if (m_viewer.finish()) {
 		delete pCapture;
 		exit(0);
@@ -336,30 +335,30 @@ void LiveScanClient::VisualiseDepthMapping()
 	for (unsigned int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
 	{
 		Point3f vertex = m_pCameraSpaceCoordinates[i];
-		RGB c={0};
-		m_pDepthRGBX[i].rgbRed = vertex.Z;	// will wrap around but good enough for debugging
+		m_pDepthRGBX[i].rgbRed = (BYTE)vertex.Z;	// more red=further away. will wrap around but good enough for debugging
 	}
 	// Draw the data
 	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_MIDDLE, "m_pCameraSpaceCoordinates");
 	
 }
 
-void LiveScanClient::VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping, std::vector<RGB> color) 
+void LiveScanClient::VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping) 
 {
 	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
 	for (unsigned int i = 0; i < vertices.size(); i++)
 	{
 		Point3s vertex = vertices[i];
-		RGB c={0};
-		c.rgbGreen=255;
-		if (vertex.X > 0 && vertex.Y > 0) {
-			c.rgbGreen=0;
-			c.rgbRed =255;// = color[(int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth];
+		// check for rogue vertices
+		if (mapping[i].Y >= 0 && mapping[i].Y < pCapture->nColorFrameHeight && mapping[i].X < pCapture->nColorFrameWidth)
+		{
+			//copy colour from raw colour buffer at mapped location
+			int colour_buffer_index = (int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth;
+			RGB tempColor = pCapture->pColorRGBX[colour_buffer_index];
+			m_pDepthRGBX[colour_buffer_index] = tempColor;
 		}
-		m_pDepthRGBX[i] = c;
 	}
 	// Draw the data
-	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), BOTTOM_MIDDLE, "mapped vertices");
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_MIDDLE, "mapped vertices");
 	
 }
 
@@ -747,6 +746,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 		{
 			Point3f temp = vertices[vertexIndex];
 			RGB tempColor = color[(int)mapping[vertexIndex].X + (int)mapping[vertexIndex].Y * pCapture->nColorFrameWidth];
+			/* lots of vertices beign filtered out by calibration!
 			if (calibration.bCalibrated)
 			{
 				temp.X += calibration.worldT[0];
@@ -759,6 +759,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 					|| temp.Z < m_vBounds[2] || temp.Z > m_vBounds[5])
 					continue;
 			}
+			*/
 
 			goodVertices.push_back(temp);
 			goodColorPoints.push_back(tempColor);

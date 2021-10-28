@@ -117,6 +117,6 @@ private:
 	void ShowFPS();
 	void ShowStatus();
 	void VisualiseDepthMapping();
-	void VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping, std::vector<RGB> color);
+	void VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping);
 };
 
