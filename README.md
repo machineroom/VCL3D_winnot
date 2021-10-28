@@ -2,12 +2,25 @@ James Wilson mucking about with port to Mac/Linux, i.e. anything not windows, of
 Started from the master branch. We might want to re-sync with the AzureKinect branch.  
 Uses freenect2 to talk to the xbox one kinect (aka kinect2)  
 
+Building on Mac (Big Sur 11.6):
+- Install libfreenect2 from source:
+    - `git clone git@github.com:OpenKinect/libfreenect2.git`
+    - `cd libfreenect2; mkdir build; cd build`
+    - `cmake ..`
+    - `make`
+    - `make install`
+- Install a bunch of stuff with brew: (at least) opencv, glfw, zstd
+- Return to this code
+- Make a `build` directory and cd into it
+- You'll likely need to `export PKG_CONFIG_PATH="/usr/local/opt/opencv/lib/pkgconfig:/usr/local/lib/pkgconfig"` so cmake can find the dev packages
+- run `cmake ..` and if all good then make
+- If all goes well you'll get a `client` executable
+
+Building on Linux (Ubuntu 21.04):
+- Very similar to Mac, but use apt instaead of brew and you might need to set PKG_CONFIG_PATH to just `/usr/local/lib/pkgconfig`
 
 Special stuff
 - Linux: may need to run client as root to access usb device
-  - Install libfreenect2 from source and set PKG_CONFIG_PATH if installed locally before running cmake
-- Mac: export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:/usr/local/lib/pkgconfig"
-- Build with cmake in usual way (cd build; cmake ..; make)
  
 Useful stuff
 - https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
