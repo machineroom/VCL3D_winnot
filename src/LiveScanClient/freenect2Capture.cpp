@@ -21,7 +21,6 @@
 #include <cstring>
 #include <cmath>
 
-
 Freenect2Capture::Freenect2Capture()
 {
 	libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Debug));

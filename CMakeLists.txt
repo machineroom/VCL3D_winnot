@@ -10,6 +10,7 @@ pkg_check_modules(ZSTD REQUIRED libzstd)
 pkg_check_modules(FREENECT REQUIRED libfreenect)
 pkg_check_modules(FREENECT2 REQUIRED freenect2)
 pkg_check_modules(GLFW3 REQUIRED glfw3)
+pkg_check_modules(GFLAGS REQUIRED gflags)
 set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 
@@ -51,5 +52,5 @@ set_property(TARGET client PROPERTY CXX_STANDARD 11)
 target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} 
                               ${FREENECT_LINK_LIBRARIES} ${FREENECT2_LINK_LIBRARIES}
                               ${GLFW3_LINK_LIBRARIES} OpenGL::GL
-                              Threads::Threads)
+                              Threads::Threads ${GFLAGS_LINK_LIBRARIES})
 

@@ -15,6 +15,7 @@ Building on Mac (Big Sur 11.6):
 - You'll likely need to `export PKG_CONFIG_PATH="/usr/local/opt/opencv/lib/pkgconfig:/usr/local/lib/pkgconfig"` so cmake can find the dev packages
 - run `cmake ..` and if all good then make
 - If all goes well you'll get a `client` executable
+- If you want a debug build (and you probably do) then add `-DCMAKE_BUILD_TYPE=DEBUG` on the cmake command line and re-build
 
 Building on Linux (Ubuntu 21.04):
 - Very similar to Mac, but use apt instaead of brew and you might need to set PKG_CONFIG_PATH to just `/usr/local/lib/pkgconfig`

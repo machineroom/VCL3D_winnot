@@ -41,7 +41,7 @@ typedef uint16_t USHORT;
 class LiveScanClient
 {
 public:
-    LiveScanClient(std::string kinectSerial, std::string server);
+    LiveScanClient(std::string kinectSerial, std::string server, int port);
     ~LiveScanClient();
 
     int                     Run();

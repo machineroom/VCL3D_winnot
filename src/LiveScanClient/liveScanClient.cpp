@@ -18,23 +18,27 @@
 #include <chrono>
 #include <fstream>
 #include <zstd.h>
+#include <gflags/gflags.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
+DEFINE_string(server, "localhost", "LiveScan server address");
+DEFINE_int32(port,48001, "LiveScan server port");
+DEFINE_string(serial, "", "Kinect serial number (underside long decimal string) - default is 1st discovered");
+
 std::mutex m_mSocketThreadMutex;
 
 int main (int argc, char **argv)
 {
-	std::string kinectSerial = "";	//TODO get from cmd line args
-	std::string server = "localhost";	//TODO get from cmd line args
-    LiveScanClient application (kinectSerial, server);
+	gflags::ParseCommandLineFlags(&argc, &argv, true);
+    LiveScanClient application (FLAGS_serial, FLAGS_server, FLAGS_port);
     application.Run();
 }
 
-LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server) :
+LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int port) :
     m_nLastCounter(0),
     m_nFramesSinceUpdate(0),
     m_fFreq(0),
@@ -63,7 +67,7 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server) :
 	m_sServer(server)
 {
 	try {
-		m_pClientSocket = new SocketClient(m_sServer, 48001);
+		m_pClientSocket = new SocketClient(m_sServer, port);
 		m_bConnected = true;
 	} 					
 	catch (...) {
