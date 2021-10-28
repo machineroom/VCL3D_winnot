@@ -262,8 +262,10 @@ struct ShaderProgram : public WithOpenGLBindings
 
 enum Position {
 	TOP_LEFT,
+	TOP_MIDDLE,
 	TOP_RIGHT,
 	BOTTOM_LEFT,
+	BOTTOM_MIDDLE,
 	BOTTOM_RIGHT
 };
 
@@ -280,12 +282,11 @@ private:
     Texture<F32C1> ir;
     int win_width;
     int win_height;
-	bool render(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel);
 public:
     Viewer();
     void initialize();
     void start(void);
-	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos);
+	bool render_colour(uint8_t *data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos, std::string title="");
     bool finish(void);
     virtual void onOpenGLBindingsChanged(OpenGLBindings *b);
     void addFrame(std::string id,libfreenect2::Frame* frame);

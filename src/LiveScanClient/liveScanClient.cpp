@@ -82,6 +82,8 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server) :
   #endif
 #endif
 	pCapture->Initialize(m_sKinectSerial);
+	
+	//m_pDepthRGBX is generically used for visualuising stuff and will be frequently overritten
 	m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
 
 	m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
@@ -232,6 +234,9 @@ void LiveScanClient::UpdateFrame()
 	ShowRawDepth();
 	ProcessDepth();
 	ShowStatus();
+	VisualiseDepthMapping();
+	//m_vLastFrameVertices & m_vLastFrameRGBupdated by StoreFrame
+	VisualiseVertices(m_vLastFrameVertices, m_pColorCoordinatesOfDepth, m_vLastFrameRGB);
 	if (m_viewer.finish()) {
 		delete pCapture;
 		exit(0);
@@ -266,7 +271,7 @@ void LiveScanClient::ProcessDepth()
 		}
 
 		// Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_LEFT);
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_LEFT, "processed depth");
 	}
 }
 
@@ -289,7 +294,7 @@ void LiveScanClient::ShowRawDepth()
 		m_pDepthRGBX[i].rgbBlue = intensity;
 	}
 	// Draw the data
-	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_LEFT);
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_LEFT, "raw depth");
 #else
 	cv::Mat depth_mm (pCapture->nDepthFrameHeight, pCapture->nDepthFrameWidth, CV_16UC1, pCapture->pDepth);
     cv::Mat downsampled;
@@ -321,12 +326,52 @@ void LiveScanClient::ProcessColor()
 	if (pCapture->pColorRGBX)
     {
         // Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pCapture->pColorRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT);
+		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pCapture->pColorRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT, "raw colour");
     }
 }
 
+void LiveScanClient::VisualiseDepthMapping()
+{
+	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
+	for (unsigned int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
+	{
+		Point3f vertex = m_pCameraSpaceCoordinates[i];
+		RGB c={0};
+		c.rgbBlue=255;
+		if (vertex.X > 0 && vertex.Y > 0) {
+			c.rgbBlue=0;
+			c.rgbRed =255;// = color[(int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth];
+		}
+		m_pDepthRGBX[i] = c;
+	}
+	// Draw the data
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_MIDDLE, "m_pCameraSpaceCoordinates");
+	
+}
+
+void LiveScanClient::VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping, std::vector<RGB> color) 
+{
+	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
+	for (unsigned int i = 0; i < vertices.size(); i++)
+	{
+		Point3s vertex = vertices[i];
+		RGB c={0};
+		c.rgbGreen=255;
+		if (vertex.X > 0 && vertex.Y > 0) {
+			c.rgbGreen=0;
+			c.rgbRed =255;// = color[(int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth];
+		}
+		m_pDepthRGBX[i] = c;
+	}
+	// Draw the data
+	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), BOTTOM_MIDDLE, "mapped vertices");
+	
+}
+
+
 // A simple text window to show client status
 void LiveScanClient::ShowStatus() {
+	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
 	std::vector<cv::String> strings;
 	if (m_bCalibrate) {
 		strings.push_back("calibrating");
@@ -724,6 +769,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 			goodColorPoints.push_back(tempColor);
 		}
 	}
+	
 
 #ifdef KINECT
 	vector<Body> tempBodies = bodies;

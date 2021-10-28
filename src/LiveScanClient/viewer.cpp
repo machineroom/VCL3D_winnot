@@ -1,9 +1,11 @@
 #include "viewer.h"
 #include <cstdlib>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 
 Viewer::Viewer() : shader_folder("src/shader/"), 
-                   win_width(600),
+                   win_width(800),
                    win_height(400)
 {
 }
@@ -154,32 +156,44 @@ void Viewer::start()
 }
 
 //botom,right control placement in 2*2 grid
-bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos)
+bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_height, int frame_bytes_per_pixel, Position pos, std::string title)
 {
 
-    int fb_width, fb_width_half, fb_height, fb_height_half;
+    int fb_width, fb_height;
 
     // Using the frame buffer size to account for screens where window.size != framebuffer.size, e.g. retina displays
     glfwGetFramebufferSize(window, &fb_width, &fb_height);
-    fb_width_half = (fb_width + 1) / 2;
-    fb_height_half = (fb_height + 1) / 2;
+    int fb_width_third = (fb_width + 1) / 3;
+	int fb_height_half = (fb_height + 1) / 2;
 
+	if (title != "") {
+		//title
+		cv::Mat mat (frame_height,frame_width,CV_8UC4,frame_data);
+	   	//cv::putText (InputOutputArray img, const String &text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false)
+	   	cv::putText(mat, title, cv::Point(0,50), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(255,255,255));
+	}
 	int x,y;
 	switch (pos) {
 		case TOP_LEFT:
 			x=0; y=fb_height_half;
 			break;
+		case TOP_MIDDLE:
+			x=fb_width_third; y=fb_height_half;
+			break;
 		case TOP_RIGHT:
-			x=fb_width_half; y=fb_height_half;
+			x=fb_width_third*2; y=fb_height_half;
 			break;
 		case BOTTOM_LEFT:
 			x=0; y=0;
 			break;
+		case BOTTOM_MIDDLE:
+			x=fb_width_third; y=0;
+			break;
 		case BOTTOM_RIGHT:
-			x=fb_width_half; y=0;
+			x=fb_width_third*2; y=0;
 			break;
 	}
-    glViewport(x, y, fb_width_half, fb_height_half);
+    glViewport(x, y, fb_width_third, fb_height_half);
 
     float w = static_cast<float>(frame_width);
     float h = static_cast<float>(frame_height);
@@ -221,6 +235,7 @@ bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_heigh
 
     gl()->glDeleteBuffers(1, &triangle_vbo);
     gl()->glDeleteVertexArrays(1, &triangle_vao);
+    return true;
 }
 
 // return true if should quit

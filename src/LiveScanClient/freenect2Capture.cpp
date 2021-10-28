@@ -162,12 +162,14 @@ bool Freenect2Capture::AcquireFrame()
 }
 
 
+// TODO freenect2 provides the mapping functions that livescan needs so this can be heavily optimised - but the current iCapture interface isn't flexible enough
+
 // for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 // mapping between depth pixel coordinates and 3D point coordinates
+// pCameraSpacePoints 512*424 {X,Y,Z}
 void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToCameraSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (CameraSpacePoint*)pCameraSpacePoints);
-	//MS Kinect CameraSpacePoint { float X, Y, Z; };
 	Point3f *out = pCameraSpacePoints;
 	for (int row=0; row < nDepthFrameHeight; row++) {
 		for (int col=0; col < nDepthFrameWidth; col++) {
@@ -187,7 +189,7 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 				out->Y = 0.f;
 				out->Z = 0.f;
 			} else {
-				// convert metres to mm as expected by livescan
+				// convert to mm as expected by livescan
 				out->X = x*1000.0f;
 				out->Y = y*1000.0f;
 				out->Z = z*1000.0f;
@@ -198,8 +200,7 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 }
 
 // mapping between depth pixel coordinates to the corresponding pixel in the color image
-// TODO freenect2 provides the mapping functions that livescan needs so this can be heavily optimised - but the current iCapture interface isn't flexible enough
-// pColorSpacePoints is 512x424 X,Y pairs
+// pColorSpacePoints 512*424 {X,Y,Z}
 void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
@@ -265,7 +266,7 @@ void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 }
 
 // pDepthSpacePoints is colour resolution (1920x1080) and gets filled with XY coord of pixel in depth image corresponding to pixel in colour image
-
+//XXX ths only used by depth preview in livescan so less important to fix
 void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
 	// TODO maybe? like seriously I have no idea.
