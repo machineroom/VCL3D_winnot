@@ -170,7 +170,14 @@ bool Viewer::render_colour(uint8_t *frame_data, int frame_width, int frame_heigh
 		//title
 		cv::Mat mat (frame_height,frame_width,CV_8UC4,frame_data);
 	   	//cv::putText (InputOutputArray img, const String &text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false)
-	   	cv::putText(mat, title, cv::Point(0,50), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(255,255,255));
+	   	int scale=1;
+	   	int thickness=1;
+	   	if (frame_height > 500) {
+	   		//help title show up on small buffers
+	   		scale = 3;
+	   		thickness=2;
+	   	}
+	   	cv::putText(mat, title, cv::Point(0,50), cv::FONT_HERSHEY_DUPLEX, scale, cv::Scalar(255,255,255), thickness, cv::LINE_AA);
 	}
 	int x,y;
 	switch (pos) {
