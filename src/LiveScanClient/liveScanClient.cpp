@@ -339,13 +339,15 @@ void LiveScanClient::VisualiseDepthMapping()
 	for (unsigned int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
 	{
 		Point3f vertex = m_pCameraSpaceCoordinates[i];
-		m_pDepthRGBX[i].rgbRed = (BYTE)vertex.Z;	// more red=further away. will wrap around but good enough for debugging
+		m_pDepthRGBX[i].rgbRed = (BYTE)vertex.Z*1000;	// meters->mm. more red=further away. will wrap around but good enough for debugging
 	}
 	// Draw the data
 	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_MIDDLE, "m_pCameraSpaceCoordinates");
 	
+	
 }
 
+//vertics units are short mm
 void LiveScanClient::VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping) 
 {
 	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
@@ -622,7 +624,7 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 	//JW: RGB.size() = number of pixels in visible frame, i.e. width*height
 	int size = RGB.size() * (3 + 3 * sizeof(short)) + sizeof(int);
 	//JW size = total number of bytes to be written to buffer. Calculated as:
-	// number of pixels * (3 bytes per pixel + 3 shorts of depth info (X,Y,Z)) + int (number of pixels)
+	// number of colour pixels * (3 bytes per RGB pixel + 3 shorts of vertex X,Y,Z as mm) + int (number of pixels)
 	// buffer stucture:
 	// [number of vertices]
 	// for n in vertices {
@@ -729,6 +731,8 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 	m_pClientSocket->SendBytes(buffer.data(), size);
 }
 
+// JW note sets m_vLastFrameVertices & m_vLastFrameRGB which are later sent to the server
+
 #ifdef KINECT
 void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color, vector<Body> &bodies, BYTE* bodyIndex)
 #else
@@ -750,7 +754,6 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 		{
 			Point3f temp = vertices[vertexIndex];
 			RGB tempColor = color[(int)mapping[vertexIndex].X + (int)mapping[vertexIndex].Y * pCapture->nColorFrameWidth];
-			/* lots of vertices beign filtered out by calibration!
 			if (calibration.bCalibrated)
 			{
 				temp.X += calibration.worldT[0];
@@ -763,7 +766,6 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 					|| temp.Z < m_vBounds[2] || temp.Z > m_vBounds[5])
 					continue;
 			}
-			*/
 
 			goodVertices.push_back(temp);
 			goodColorPoints.push_back(tempColor);
@@ -798,7 +800,8 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 
 	if (m_bFilter)
 		filter(goodVertices, goodColorPoints, m_nFilterNeighbors, m_fFilterThreshold);
-
+	
+	//JW note this will convert float meters to short mm (server expects mm)
 	vector<Point3s> goodVerticesShort(goodVertices.size());
 
 	for (unsigned int i = 0; i < goodVertices.size(); i++)

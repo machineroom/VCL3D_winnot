@@ -116,7 +116,7 @@ std::string Freenect2Capture::Identifier() {
 bool Freenect2Capture::AcquireFrame()
 {
 	libfreenect2::FrameMap frames;
-    if (!listener->waitForNewFrame(frames, 10*1000)) // 10 sconds
+    if (!listener->waitForNewFrame(frames, 10*1000)) // 10 seconds
     {
 		std::cout << "timeout!" << std::endl;
 		return false;
@@ -185,10 +185,10 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 				out->Y = 0.f;
 				out->Z = 0.f;
 			} else {
-				// convert to mm as expected by livescan
-				out->X = x;//*1000.0f;
-				out->Y = y;//*1000.0f;
-				out->Z = z;//*1000.0f;
+				// units are in float meters
+				out->X = x;
+				out->Y = y;
+				out->Z = z;
 			}
 			out++;
 		}	
@@ -252,9 +252,9 @@ void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 			float x, y, z, rgb;
 			registration->getPointXYZRGB (undistorted, registered, row, col, x, y, z, rgb);
 			// convert metres to mm as expected by livescan
-			out->X = x*1000.0f;
-			out->Y = y*1000.0f;
-			out->Z = z*1000.0f;
+			out->X = x;
+			out->Y = y;
+			out->Z = z;
 			// RGB data is ignored - livescan only wants the coordinates
 			out++;
 		}	
