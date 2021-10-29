@@ -7,7 +7,6 @@ project(LiveScanClient)
 
 pkg_check_modules(OPENCV REQUIRED opencv4)
 pkg_check_modules(ZSTD REQUIRED libzstd)
-pkg_check_modules(FREENECT REQUIRED libfreenect)
 pkg_check_modules(FREENECT2 REQUIRED freenect2)
 pkg_check_modules(GLFW3 REQUIRED glfw3)
 pkg_check_modules(GFLAGS REQUIRED gflags)
@@ -22,7 +21,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${OPENCV_INCLUDE_DIRS})
 include_directories(${ZSTD_INCLUDE_DIRS})
 include_directories(${NANOFLANN_INCLUDE_DIRS})
-include_directories(${FREENECT_INCLUDE_DIRS})
 include_directories(${FREENECT2_INCLUDE_DIRS})
 include_directories(${GLFW3_INCLUDE_DIRS})
 
@@ -49,8 +47,12 @@ add_executable(client ${SOURCES})
 
 # this code won't build on newer g++ (17)
 set_property(TARGET client PROPERTY CXX_STANDARD 11)
-target_link_libraries (client ${OPENCV_LINK_LIBRARIES} ${ZSTD_LINK_LIBRARIES} 
-                              ${FREENECT_LINK_LIBRARIES} ${FREENECT2_LINK_LIBRARIES}
-                              ${GLFW3_LINK_LIBRARIES} OpenGL::GL
-                              Threads::Threads ${GFLAGS_LINK_LIBRARIES})
+target_link_libraries (client ${OPENCV_LINK_LIBRARIES}
+						      ${ZSTD_LINK_LIBRARIES} 
+                              ${FREENECT2_LINK_LIBRARIES}
+                              ${GLFW3_LINK_LIBRARIES}
+                              OpenGL::GL
+                              Threads::Threads
+                              ${GFLAGS_LINK_LIBRARIES}
+                      )
 

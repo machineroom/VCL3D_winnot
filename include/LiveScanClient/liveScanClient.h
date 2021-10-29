@@ -22,7 +22,6 @@
 #ifdef KINECT
 #include "kinectCapture.h"
 #else
-#include "freenectCapture.h"
 #include "freenect2Capture.h"
 #endif
 
