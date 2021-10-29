@@ -21,7 +21,7 @@ MarkerDetector::MarkerDetector()
 {
 	nMinSize = 100;
 	nMaxSize = 1000000000;
-	nThreshold = 120;
+	nThreshold = 200;
 	dApproxPolyCoef = 0.12;
 
 	dMarkerFrame = 0.4;
@@ -40,6 +40,10 @@ bool MarkerDetector::GetMarker(cv::Mat &img, MarkerInfo &marker)
 	cv::threshold(img2, img2, nThreshold, 255, cv::THRESH_BINARY);
 
 	img2.copyTo(img3);
+
+	//useful debug to show image - sometimes the marker isn't visible or washed out
+	//cv::imshow("img3",img3);
+	//cv::waitKey(0);
 
 	vector<vector<cv::Point>> contours;	
 	cv::findContours(img3, contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
