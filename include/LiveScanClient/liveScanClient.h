@@ -76,9 +76,6 @@ private:
 
 	std::vector<Point3s> m_vLastFrameVertices;
 	std::vector<RGB> m_vLastFrameRGB;
-#ifdef KINECT
-	std::vector<Body> m_vLastFrameBody;
-#endif
 
     INT64 m_nLastCounter;
     double m_fFreq;
@@ -99,19 +96,11 @@ private:
     bool SetStatusMessage(WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
 
 	void HandleSocket();
-#ifdef KINECT
-	void SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector<Body> body);
-#else
 	void SendFrame(vector<Point3s> vertices, vector<RGB> RGB);
-#endif
 
 	void SocketThreadFunction();
 
-#ifdef KINECT
-	void StoreFrame(Point3f *vertices, RGB *color, vector<Body> &bodies, BYTE* bodyIndex);
-#else
 	void StoreFrame(Point3f *vertices, RGB *color);
-#endif
 	void ShowFPS();
 	void ShowStatus();
 	void VisualiseDepthMapping();
