@@ -12,7 +12,6 @@
 //        title={LiveScan3D: A Fast and Inexpensive 3D Data Acquisition System for Multiple Kinect v2 Sensors},
 //        year={2015},
 //    }
-//#include "resource.h"
 #include "liveScanClient.h"
 #include "filter.h"
 #include <chrono>
