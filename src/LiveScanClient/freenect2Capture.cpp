@@ -89,8 +89,7 @@ bool Freenect2Capture::Initialize(std::string serial)
 	}
 
 	/// [listeners]
-	//TODO is IR required?
-	int types = libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
+	int types = libfreenect2::Frame::Color | libfreenect2::Frame::Depth;
 	listener = new libfreenect2::SyncMultiFrameListener (types);
 
 	dev->setColorFrameListener (listener);
