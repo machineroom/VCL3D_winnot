@@ -140,7 +140,7 @@ bool Freenect2Capture::AcquireFrame()
 	* @param[out] color_depth_map Index of mapped color pixel for each depth pixel (512x424).
 	*/
   	//void apply(const Frame* rgb, const Frame* depth, Frame* undistorted, Frame* registered, const bool enable_filter = true, Frame* bigdepth = 0, int* color_depth_map = 0) const;
-	registration->apply(rgb, depth, undistorted, registered, true, NULL, depthToColourMap);
+	registration->apply(rgb, depth, undistorted, registered, true, NULL, NULL);
 
 	//copy frame data into our buffers so livescan can process it
 	// Use the 'registered' colour data so points in depth and points in colour are equivelant
@@ -164,8 +164,6 @@ bool Freenect2Capture::AcquireFrame()
 	return true;
 }
 
-
-// TODO freenect2 provides the mapping functions that livescan needs so this can be heavily optimised - but the current iCapture interface isn't flexible enough
 
 // for info in MS kinect mappings see https://ed.ilogues.com/Tutorials/kinect2/kinect3.html
 // mapping between depth pixel coordinates and 3D point coordinates
@@ -235,26 +233,16 @@ void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 	}	
 }
 
-//XX this used during calibration
+//XXX this used during calibration
 void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
-	// TODO maybe? like seriously I have no idea.
-	Point3f *out = pCameraSpacePoints;
-	for (int row=0; row < nDepthFrameHeight; row++) {
-		for (int col=0; col < nDepthFrameWidth; col++) {
-			float x, y, z;
-			registration->getPointXYZ (undistorted, row, col, x, y, z);
-			out->X = x;
-			out->Y = y;
-			out->Z = z;
-			out++;
-		}	
-	}	
+	// since colour & depth are aligned we re-use the same code
+	MapDepthFrameToCameraSpace(pCameraSpacePoints);
 }
 
 // pDepthSpacePoints is colour resolution (1920x1080) and gets filled with XY coord of pixel in depth image corresponding to pixel in colour image
 //XXX this only used by depth preview in livescan so less important to fix
-//XX no longer used
+//XXX no longer used
 void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
 	// TODO maybe? like seriously I have no idea.

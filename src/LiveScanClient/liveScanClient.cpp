@@ -186,7 +186,7 @@ void LiveScanClient::UpdateFrame()
 
 	//View the depth, colour, status etc.
 	m_viewer.start();
-	ProcessColor();
+	ShowRawColour();
 	ShowRawDepth();
 	CalculateFPS();
 	ShowStatus();
@@ -241,7 +241,7 @@ void LiveScanClient::ShowRawDepth()
 #endif
 }
 
-void LiveScanClient::ProcessColor()
+void LiveScanClient::ShowRawColour()
 {
     // Make sure we've received valid data
 	if (pCapture->pColorRGBX)
@@ -552,7 +552,7 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 		if (vertices[vertexIndex].Z >= 0)
 		{
 			Point3f temp = vertices[vertexIndex];
-			//RGB tempColor = color[pCapture->depthToColourMap[vertexIndex]];
+			// since we _know_ that depth & colour are the same resolution and 1:1 mapping...
 			RGB tempColor = color[vertexIndex];
 			if (calibration.bCalibrated)
 			{

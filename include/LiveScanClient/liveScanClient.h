@@ -89,8 +89,7 @@ private:
 
 
 	void UpdateFrame();
-    void ProcessColor();
-	void ProcessDepth();
+    void ShowRawColour();
 	void ShowRawDepth();
 
 	void HandleSocket();
