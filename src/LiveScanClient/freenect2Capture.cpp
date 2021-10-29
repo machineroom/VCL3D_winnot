@@ -13,7 +13,6 @@
 //        year={2015},
 //    }
 #include "freenect2Capture.h"
-#include <libfreenect_registration.h>
 #include <chrono>
 #include <cassert>
 #include <iostream>
