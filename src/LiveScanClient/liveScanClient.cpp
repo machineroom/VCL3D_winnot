@@ -48,9 +48,6 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int
 	m_pDepthCoordinatesOfColor(NULL),
 	m_bCalibrate(false),
 	m_bFilter(false),
-#ifdef KINECT
-	m_bStreamOnlyBodies(false),
-#endif
 	m_bCaptureFrame(false),
 	m_bConnected(false),
 	m_bConfirmCaptured(false),
@@ -74,15 +71,7 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int
 	}
 
 
-#ifdef KINECT
-	pCapture = new KinectCapture();
-#else
-  #ifdef FREENECT1
-	pCapture = new FreenectCapture();
-  #else
 	pCapture = new Freenect2Capture();
-  #endif
-#endif
 	pCapture->Initialize(m_sKinectSerial);
 	
 	//m_pDepthRGBX is generically used for visualuising stuff and will be frequently overritten
@@ -178,11 +167,7 @@ void LiveScanClient::UpdateFrame()
 	pCapture->MapDepthFrameToCameraSpace(m_pCameraSpaceCoordinates);
 	{
 		std::lock_guard<std::mutex> lock(m_mSocketThreadMutex);
-#ifdef KINECT
-		StoreFrame(m_pCameraSpaceCoordinates, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
-#else
 		StoreFrame(m_pCameraSpaceCoordinates/*vertices*/, pCapture->pColorRGBX/*color*/);
-#endif
 
 		if (m_bCaptureFrame)
 		{
@@ -447,11 +432,7 @@ void LiveScanClient::HandleSocket()
 				int size = -1;
 				m_pClientSocket->SendBytes((char*)&size, 4);
 			} else
-#ifdef KINECT
-				SendFrame(points, colors, m_vLastFrameBody);
-#else
 				SendFrame(points, colors);
-#endif
 		}
 		//send last frame
 		else if (received[i] == MSG_REQUEST_LAST_FRAME)
@@ -459,11 +440,7 @@ void LiveScanClient::HandleSocket()
 			byteToSend = MSG_LAST_FRAME;
 			m_pClientSocket->SendBytes(&byteToSend, 1);
 
-#ifdef KINECT
-			SendFrame(m_vLastFrameVertices, m_vLastFrameRGB, m_vLastFrameBody);
-#else
 			SendFrame(m_vLastFrameVertices, m_vLastFrameRGB);
-#endif
 		}
 		//receive calibration data
 		else if (received[i] == MSG_RECEIVE_CALIBRATION)
@@ -522,11 +499,7 @@ void LiveScanClient::HandleSocket()
 	}
 }
 
-#ifdef KINECT
-void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB, vector<Body> body)
-#else
 void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
-#endif
 {
 	//JW: RGB.size() = number of pixels in visible frame, i.e. width*height
 	int size = RGB.size() * (3 + 3 * sizeof(short)) + sizeof(int);
@@ -560,63 +533,13 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 		pos += sizeof(short) * 3;
 	}
 	
-#ifdef KINECT
-	int nBodies = body.size();
-	size += sizeof(nBodies);
-	for (int i = 0; i < nBodies; i++)
-	{
-		size += sizeof(body[i].bTracked);
-		int nJoints = body[i].vJoints.size();
-		size += sizeof(nJoints);
-		size += nJoints * (3 * sizeof(float) + 2 * sizeof(int));
-		size += nJoints * 2 * sizeof(float);
-	}
-	buffer.resize(size);
-	
-	memcpy(buffer.data() + pos, &nBodies, sizeof(nBodies));
-	pos += sizeof(nBodies);
-
-	for (int i = 0; i < nBodies; i++)
-	{
-		memcpy(buffer.data() + pos, &body[i].bTracked, sizeof(body[i].bTracked));
-		pos += sizeof(body[i].bTracked);
-
-		int nJoints = body[i].vJoints.size();
-		memcpy(buffer.data() + pos, &nJoints, sizeof(nJoints));
-		pos += sizeof(nJoints);
-
-		for (int j = 0; j < nJoints; j++)
-		{
-			//Joint
-			memcpy(buffer.data() + pos, &body[i].vJoints[j].JointType, sizeof(JointType));
-			pos += sizeof(JointType);
-			memcpy(buffer.data() + pos, &body[i].vJoints[j].TrackingState, sizeof(TrackingState));
-			pos += sizeof(TrackingState);
-			//Joint position
-			memcpy(buffer.data() + pos, &body[i].vJoints[j].Position.X, sizeof(float));
-			pos += sizeof(float);
-			memcpy(buffer.data() + pos, &body[i].vJoints[j].Position.Y, sizeof(float));
-			pos += sizeof(float);
-			memcpy(buffer.data() + pos, &body[i].vJoints[j].Position.Z, sizeof(float));
-			pos += sizeof(float);
-
-			//JointInColorSpace
-			memcpy(buffer.data() + pos, &body[i].vJointsInColorSpace[j].X, sizeof(float));
-			pos += sizeof(float);
-			memcpy(buffer.data() + pos, &body[i].vJointsInColorSpace[j].Y, sizeof(float));
-			pos += sizeof(float);
-		}
-	}
-#else	//!KINECT
-	// still need to send empty bodies header
+	// send empty bodies header (the original windows code could send kinect tracked body data)
 	int nBodies = 0;
 	size += sizeof(nBodies);
 	buffer.resize(size);
 	
 	memcpy(buffer.data() + pos, &nBodies, sizeof(nBodies));
 	pos += sizeof(nBodies);
-
-#endif // KINECT
 
 	int iCompression = static_cast<int>(m_bFrameCompression);
 
@@ -640,11 +563,7 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 
 // JW note sets m_vLastFrameVertices & m_vLastFrameRGB which are later sent to the server
 
-#ifdef KINECT
-void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color, vector<Body> &bodies, BYTE* bodyIndex)
-#else
 void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
-#endif
 {
 	std::vector<Point3f> goodVertices;
 	std::vector<RGB> goodColorPoints;
@@ -653,10 +572,6 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 
 	for (unsigned int vertexIndex = 0; vertexIndex < nVertices; vertexIndex++)
 	{
-#ifdef KINECT
-		if (m_bStreamOnlyBodies && bodyIndex[vertexIndex] >= bodies.size())
-			continue;
-#endif
 		if (vertices[vertexIndex].Z >= 0)
 		{
 			Point3f temp = vertices[vertexIndex];
@@ -679,32 +594,6 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 		}
 	}
 	
-
-#ifdef KINECT
-	vector<Body> tempBodies = bodies;
-
-	for (unsigned int i = 0; i < tempBodies.size(); i++)
-	{
-		for (unsigned int j = 0; j < tempBodies[i].vJoints.size(); j++)
-		{
-			if (calibration.bCalibrated)
-			{
-				tempBodies[i].vJoints[j].Position.X += calibration.worldT[0];
-				tempBodies[i].vJoints[j].Position.Y += calibration.worldT[1];
-				tempBodies[i].vJoints[j].Position.Z += calibration.worldT[2];
-
-				Point3f tempPoint(tempBodies[i].vJoints[j].Position.X, tempBodies[i].vJoints[j].Position.Y, tempBodies[i].vJoints[j].Position.Z);
-
-				tempPoint = RotatePoint(tempPoint, calibration.worldR);
-
-				tempBodies[i].vJoints[j].Position.X = tempPoint.X;
-				tempBodies[i].vJoints[j].Position.Y = tempPoint.Y;
-				tempBodies[i].vJoints[j].Position.Z = tempPoint.Z;
-			}
-		}
-	}
-#endif //KINECT
-
 	if (m_bFilter)
 		filter(goodVertices, goodColorPoints, m_nFilterNeighbors, m_fFilterThreshold);
 	
@@ -716,9 +605,6 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 		goodVerticesShort[i] = goodVertices[i];
 	}
 
-#ifdef KINECT
-	m_vLastFrameBody = tempBodies;
-#endif
 	m_vLastFrameVertices = goodVerticesShort;
 	m_vLastFrameRGB = goodColorPoints;
 }
