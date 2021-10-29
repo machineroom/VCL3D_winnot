@@ -39,10 +39,6 @@ int main (int argc, char **argv)
 }
 
 LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int port) :
-    m_nLastCounter(0),
-    m_nFramesSinceUpdate(0),
-    m_fFreq(0),
-    m_nNextStatusTime(0LL),
 	m_pDepthRGBX(NULL),
 	m_pCameraSpaceCoordinates(NULL),
 	m_pDepthCoordinatesOfColor(NULL),
@@ -85,12 +81,7 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int
 	m_viewer.initialize();
 
 
-    /*TODO port from windows
-	LARGE_INTEGER qpf = {0};
-    if (QueryPerformanceFrequency(&qpf))
-    {
-        m_fFreq = double(qpf.QuadPart);
-    }*/
+	m_lastClockReading = std::chrono::steady_clock::now();
 
 	m_vBounds.push_back(-0.5);
 	m_vBounds.push_back(-0.5);
@@ -198,12 +189,12 @@ void LiveScanClient::UpdateFrame()
 	m_viewer.start();
 	ProcessColor();
 	ShowRawDepth();
+	CalculateFPS();
 	ShowStatus();
 	if (m_viewer.finish()) {
 		delete pCapture;
 		exit(0);
 	}
-	ShowFPS();
 }
 
 #define GREY_SCALE_DEPTH
@@ -277,6 +268,10 @@ void LiveScanClient::ShowStatus() {
 	} else {
 		strings.push_back("not connected");
 	}
+	std::stringstream stream;
+	stream << std::fixed << std::setprecision(2) << m_fps;
+	std::string fps = stream.str();
+	strings.push_back ("FPS " + fps);
 	cv::Mat mat (512,512,CV_8UC3);
 	mat = cv::Scalar(0,0,0);
 	cv::Point position(0,50);
@@ -307,23 +302,6 @@ void LiveScanClient::ShowStatus() {
    	}
 	m_viewer.render_colour((uint8_t *)m_pDepthRGBX, mat.cols, mat.rows, sizeof(RGB), BOTTOM_RIGHT);
 }
-
-	/* TODO port from windows
-bool LiveScanClient::SetStatusMessage(_In_z_ WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce)
-{
-    INT64 now = GetTickCount64();
-
-    if (m_hWnd && (bForce || (m_nNextStatusTime <= now)))
-    {
-        SetDlgItemText(m_hWnd, IDC_STATUS, szMessage);
-        m_nNextStatusTime = now + nShowTimeMsec;
-
-        return true;
-    }
-
-    return false;
-}
-*/
 
 void LiveScanClient::SocketThreadFunction()
 {
@@ -609,34 +587,11 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 	m_vLastFrameRGB = goodColorPoints;
 }
 
-void LiveScanClient::ShowFPS()
+void LiveScanClient::CalculateFPS()
 {
-	/* TODO port from windows
-	if (m_hWnd)
-	{
-		double fps = 0.0;
-
-		LARGE_INTEGER qpcNow = { 0 };
-		if (m_fFreq)
-		{
-			if (QueryPerformanceCounter(&qpcNow))
-			{
-				if (m_nLastCounter)
-				{
-					m_nFramesSinceUpdate++;
-					fps = m_fFreq * m_nFramesSinceUpdate / double(qpcNow.QuadPart - m_nLastCounter);
-				}
-			}
-		}
-
-		WCHAR szStatusMessage[64];
-		StringCchPrintf(szStatusMessage, _countof(szStatusMessage), L" FPS = %0.2f", fps);
-
-		if (SetStatusMessage(szStatusMessage, 1000, false))
-		{
-			m_nLastCounter = qpcNow.QuadPart;
-			m_nFramesSinceUpdate = 0;
-		}
-	}*/
+	auto now = std::chrono::steady_clock::now();
+	std::chrono::duration<double> elapsed = now - m_lastClockReading;
+	m_fps = 1.f/elapsed.count();
+	m_lastClockReading = now;
 }
 

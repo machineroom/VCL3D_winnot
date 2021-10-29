@@ -28,6 +28,7 @@
 #include "frameFileWriterReader.h"
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 #include <stdint.h>
 typedef uint32_t DWORD;
@@ -77,23 +78,20 @@ private:
 	std::vector<Point3s> m_vLastFrameVertices;
 	std::vector<RGB> m_vLastFrameRGB;
 
-    INT64 m_nLastCounter;
-    double m_fFreq;
-    INT64 m_nNextStatusTime;
-    DWORD m_nFramesSinceUpdate;	
+    std::chrono::time_point<std::chrono::steady_clock> m_lastClockReading;
 
 	Point3f* m_pCameraSpaceCoordinates;
 	Point2f* m_pDepthCoordinatesOfColor;
 
     Viewer m_viewer;
 	RGB* m_pDepthRGBX;
+	float m_fps;
+
 
 	void UpdateFrame();
     void ProcessColor();
 	void ProcessDepth();
 	void ShowRawDepth();
-
-    bool SetStatusMessage(WCHAR* szMessage, DWORD nShowTimeMsec, bool bForce);
 
 	void HandleSocket();
 	void SendFrame(vector<Point3s> vertices, vector<RGB> RGB);
@@ -101,7 +99,7 @@ private:
 	void SocketThreadFunction();
 
 	void StoreFrame(Point3f *vertices, RGB *color);
-	void ShowFPS();
+	void CalculateFPS();
 	void ShowStatus();
 	void VisualiseDepthMapping();
 };
