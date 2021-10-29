@@ -35,6 +35,7 @@ Freenect2Capture::Freenect2Capture()
 	pDepth = (UINT16*)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*pDepth));	//16 bits per depth sample
 	undistorted = new libfreenect2::Frame (nDepthFrameWidth, nDepthFrameHeight, sizeof(float));
 	registered = new libfreenect2::Frame (nDepthFrameWidth, nDepthFrameHeight, sizeof(float));
+	depthToColourMap = (int *)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*depthToColourMap));
 }
 
 Freenect2Capture::~Freenect2Capture()
@@ -134,7 +135,7 @@ bool Freenect2Capture::AcquireFrame()
 	* @param[out] color_depth_map Index of mapped color pixel for each depth pixel (512x424).
 	*/
   	//void apply(const Frame* rgb, const Frame* depth, Frame* undistorted, Frame* registered, const bool enable_filter = true, Frame* bigdepth = 0, int* color_depth_map = 0) const;
-	registration->apply(rgb, depth, undistorted, registered);
+	registration->apply(rgb, depth, undistorted, registered, true, NULL, depthToColourMap);
 
 	//copy frame data into our buffers so livescan can process it
 	//TODO check dimensions won't overwrite our buffer

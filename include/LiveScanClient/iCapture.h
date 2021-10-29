@@ -60,8 +60,9 @@ public:
 	int nColorFrameHeight, nColorFrameWidth;
 	int nDepthFrameHeight, nDepthFrameWidth;
 
-	UINT16 *pDepth;
+	UINT16 *pDepth;			// raw mm readings from depth sensor
 	BYTE *pBodyIndex;
-	RGB *pColorRGBX;
+	RGB *pColorRGBX;		// raw RGB pixels from colour sensor
+	int *depthToColourMap;	// index of color pixel for each depth pixel (same dimensions as pDepth)
 	std::vector<Body> vBodies;
 };

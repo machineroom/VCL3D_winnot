@@ -45,7 +45,6 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int
     m_nNextStatusTime(0LL),
 	m_pDepthRGBX(NULL),
 	m_pCameraSpaceCoordinates(NULL),
-	m_pColorCoordinatesOfDepth(NULL),
 	m_pDepthCoordinatesOfColor(NULL),
 	m_bCalibrate(false),
 	m_bFilter(false),
@@ -90,7 +89,6 @@ LiveScanClient::LiveScanClient(std::string kinectSerial, std::string server, int
 	m_pDepthRGBX = new RGB[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
 
 	m_pCameraSpaceCoordinates = new Point3f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
-	m_pColorCoordinatesOfDepth = new Point2f[pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight];
 	m_pDepthCoordinatesOfColor = new Point2f[pCapture->nColorFrameWidth * pCapture->nColorFrameHeight];
 
 	// Create and initialize a new image renderer (take a look at ImageRenderer.h)
@@ -136,12 +134,6 @@ LiveScanClient::~LiveScanClient()
 		m_pCameraSpaceCoordinates = NULL;
 	}
 
-	if (m_pColorCoordinatesOfDepth)
-	{
-		delete[] m_pColorCoordinatesOfDepth;
-		m_pColorCoordinatesOfDepth = NULL;
-	}
-
 	if (m_pDepthCoordinatesOfColor)
 	{
 		delete[] m_pDepthCoordinatesOfColor;
@@ -184,20 +176,12 @@ void LiveScanClient::UpdateFrame()
 		return;
 
 	pCapture->MapDepthFrameToCameraSpace(m_pCameraSpaceCoordinates);
-	pCapture->MapDepthFrameToColorSpace(m_pColorCoordinatesOfDepth);
 	{
 		std::lock_guard<std::mutex> lock(m_mSocketThreadMutex);
-		//JW what's going on here?
-		// Guts of StoreFrame: 
-		//   for (v in vertices):
-		//     RGB = color[mapping[v.X, v.Y]];
-		//   vertices are offset & rotated accoring to calibration
-		// vertices & RGB vectors are what's sent to the server
-		//TODO libfreenect2 does all this mapping so extend the iCapture interface to allow that (and future portability to realsense). Look at the azure kinect branch too for inspiration.
 #ifdef KINECT
-		StoreFrame(m_pCameraSpaceCoordinates, m_pColorCoordinatesOfDepth, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
+		StoreFrame(m_pCameraSpaceCoordinates, pCapture->pColorRGBX, pCapture->vBodies, pCapture->pBodyIndex);
 #else
-		StoreFrame(m_pCameraSpaceCoordinates/*vertices*/, m_pColorCoordinatesOfDepth/*mapping*/, pCapture->pColorRGBX/*color*/);
+		StoreFrame(m_pCameraSpaceCoordinates/*vertices*/, pCapture->pColorRGBX/*color*/);
 #endif
 
 		if (m_bCaptureFrame)
@@ -225,57 +209,16 @@ void LiveScanClient::UpdateFrame()
 		}
 	}
 
-	//locally render either the depth or colour buffers
-	//TODO in the Windows build this flag controlled via a GUI button. In Linux/GL show both
-	/*if (!m_bShowDepth)
-		ProcessColor(pCapture->pColorRGBX, pCapture->nColorFrameWidth, pCapture->nColorFrameHeight);
-	else
-		ProcessDepth(pCapture->pDepth, pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight);
-	*/
+	//View the depth, colour, status etc.
 	m_viewer.start();
 	ProcessColor();
 	ShowRawDepth();
-	ProcessDepth();
 	ShowStatus();
-	VisualiseDepthMapping();
-	//m_vLastFrameVertices set by StoreFrame
-	VisualiseVertices(m_vLastFrameVertices, m_pColorCoordinatesOfDepth);
 	if (m_viewer.finish()) {
 		delete pCapture;
 		exit(0);
 	}
 	ShowFPS();
-}
-
-void LiveScanClient::ProcessDepth()
-{
-	// m_pDepthRGBX: 1920*1080 RGBX buffer that gets filled by this function
-	// m_pDepthCoordinatesOfColor: 1920x1080 XY coord of pixel in depth image corresponding to pixel in colour image
-	// Make sure we've received valid data
-	if (m_pDepthRGBX && m_pDepthCoordinatesOfColor && pCapture->pDepth)
-	{
-		pCapture->MapColorFrameToDepthSpace(m_pDepthCoordinatesOfColor);
-
-		for (int i = 0; i < pCapture->nColorFrameWidth * pCapture->nColorFrameHeight; i++)
-		{
-			Point2f depthPoint = m_pDepthCoordinatesOfColor[i];
-			BYTE intensity = 0;
-			
-			if (depthPoint.X >= 0 && depthPoint.Y >= 0)
-			{
-				int depthIdx = (int)(depthPoint.X + depthPoint.Y * pCapture->nDepthFrameWidth);
-				UINT16 depth = pCapture->pDepth[depthIdx];
-				intensity = static_cast<BYTE>(depth % 256);
-			}
-
-			m_pDepthRGBX[i].rgbRed = intensity;
-			m_pDepthRGBX[i].rgbGreen = intensity;
-			m_pDepthRGBX[i].rgbBlue = intensity;
-		}
-
-		// Draw the data
-		m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_LEFT, "processed depth");
-	}
 }
 
 #define GREY_SCALE_DEPTH
@@ -332,42 +275,6 @@ void LiveScanClient::ProcessColor()
 		m_viewer.render_colour(reinterpret_cast<uint8_t*>(pCapture->pColorRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), TOP_RIGHT, "raw colour");
     }
 }
-
-void LiveScanClient::VisualiseDepthMapping()
-{
-	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
-	for (unsigned int i = 0; i < pCapture->nDepthFrameWidth * pCapture->nDepthFrameHeight; i++)
-	{
-		Point3f vertex = m_pCameraSpaceCoordinates[i];
-		m_pDepthRGBX[i].rgbRed = (BYTE)vertex.Z*1000;	// meters->mm. more red=further away. will wrap around but good enough for debugging
-	}
-	// Draw the data
-	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nDepthFrameWidth, pCapture->nDepthFrameHeight, sizeof(RGB), TOP_MIDDLE, "m_pCameraSpaceCoordinates");
-	
-	
-}
-
-//vertics units are short mm
-void LiveScanClient::VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping) 
-{
-	memset (m_pDepthRGBX, 0, sizeof(*m_pDepthRGBX)*pCapture->nColorFrameWidth*pCapture->nColorFrameHeight);
-	for (unsigned int i = 0; i < vertices.size(); i++)
-	{
-		Point3s vertex = vertices[i];
-		// check for rogue vertices
-		if (mapping[i].Y >= 0 && mapping[i].Y < pCapture->nColorFrameHeight && mapping[i].X < pCapture->nColorFrameWidth)
-		{
-			//copy colour from raw colour buffer at mapped location
-			int colour_buffer_index = (int)mapping[i].X + (int)mapping[i].Y * pCapture->nColorFrameWidth;
-			RGB tempColor = pCapture->pColorRGBX[colour_buffer_index];
-			m_pDepthRGBX[colour_buffer_index] = tempColor;
-		}
-	}
-	// Draw the data
-	m_viewer.render_colour(reinterpret_cast<uint8_t*>(m_pDepthRGBX), pCapture->nColorFrameWidth, pCapture->nColorFrameHeight, sizeof(RGB), BOTTOM_MIDDLE, "mapped vertices");
-	
-}
-
 
 // A simple text window to show client status
 void LiveScanClient::ShowStatus() {
@@ -734,9 +641,9 @@ void LiveScanClient::SendFrame(vector<Point3s> vertices, vector<RGB> RGB)
 // JW note sets m_vLastFrameVertices & m_vLastFrameRGB which are later sent to the server
 
 #ifdef KINECT
-void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color, vector<Body> &bodies, BYTE* bodyIndex)
+void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color, vector<Body> &bodies, BYTE* bodyIndex)
 #else
-void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
+void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 #endif
 {
 	std::vector<Point3f> goodVertices;
@@ -750,10 +657,10 @@ void LiveScanClient::StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color)
 		if (m_bStreamOnlyBodies && bodyIndex[vertexIndex] >= bodies.size())
 			continue;
 #endif
-		if (vertices[vertexIndex].Z >= 0 && mapping[vertexIndex].Y >= 0 && mapping[vertexIndex].Y < pCapture->nColorFrameHeight && mapping[vertexIndex].X < pCapture->nColorFrameWidth)
+		if (vertices[vertexIndex].Z >= 0)
 		{
 			Point3f temp = vertices[vertexIndex];
-			RGB tempColor = color[(int)mapping[vertexIndex].X + (int)mapping[vertexIndex].Y * pCapture->nColorFrameWidth];
+			RGB tempColor = color[pCapture->depthToColourMap[vertexIndex]];
 			if (calibration.bCalibrated)
 			{
 				temp.X += calibration.worldT[0];

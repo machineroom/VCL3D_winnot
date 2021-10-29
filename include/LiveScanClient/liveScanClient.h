@@ -86,7 +86,6 @@ private:
     DWORD m_nFramesSinceUpdate;	
 
 	Point3f* m_pCameraSpaceCoordinates;
-	Point2f* m_pColorCoordinatesOfDepth;
 	Point2f* m_pDepthCoordinatesOfColor;
 
     Viewer m_viewer;
@@ -109,13 +108,12 @@ private:
 	void SocketThreadFunction();
 
 #ifdef KINECT
-	void StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color, vector<Body> &bodies, BYTE* bodyIndex);
+	void StoreFrame(Point3f *vertices, RGB *color, vector<Body> &bodies, BYTE* bodyIndex);
 #else
-	void StoreFrame(Point3f *vertices, Point2f *mapping, RGB *color);
+	void StoreFrame(Point3f *vertices, RGB *color);
 #endif
 	void ShowFPS();
 	void ShowStatus();
 	void VisualiseDepthMapping();
-	void VisualiseVertices(	std::vector<Point3s> vertices, Point2f *mapping);
 };
 
