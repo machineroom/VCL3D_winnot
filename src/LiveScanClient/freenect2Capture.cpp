@@ -186,9 +186,9 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 				out->Z = 0.f;
 			} else {
 				// convert to mm as expected by livescan
-				out->X = x*1000.0f;
-				out->Y = y*1000.0f;
-				out->Z = z*1000.0f;
+				out->X = x;//*1000.0f;
+				out->Y = y;//*1000.0f;
+				out->Z = z;//*1000.0f;
 			}
 			out++;
 		}	
