@@ -244,6 +244,7 @@ void Calibration::Procrustes(MarkerInfo &marker, vector<Point3f> &markerInWorld,
 	}
 }
 
+// JW marker info found by openCV will have coordinates in 2D colour frame space. Transform to 3D space coordinates
 bool Calibration::GetMarkerCorners3D(vector<Point3f> &marker3D, MarkerInfo &marker, Point3f *pCameraCoordinates, int cColorWidth, int cColorHeight)
 {
 	for (unsigned int i = 0; i < marker.corners.size(); i++)

@@ -28,8 +28,13 @@ Freenect2Capture::Freenect2Capture()
     //Depth = 4  ///< 512x424 float, unit: millimeter. Non-positive, NaN, and infinity are invalid or missing data.
 	nDepthFrameWidth = 512;
 	nDepthFrameHeight = 424;
-	nColorFrameWidth = 1920;
-	nColorFrameHeight = 1080;
+	//Ugh? Well... livescan calibration requires to map colour pixel coordinates to XYZ world carterian coords and there's
+	// no way to do that with libfreenect2. Simplest is to treat colour and depth the same and use libfreenect2 apply()
+	// to make sure they're aligned. Then mapping in colour == mapping in depth and life is a lot sipler! Since livescan
+	// only receives colour samples that map to depth vertices anyway the loss of resolution on colour probably won't be 
+	// noticed.
+	nColorFrameWidth = nDepthFrameWidth;
+	nColorFrameHeight = nDepthFrameHeight;
 	// The buffers accessed by livescanclient
 	pColorRGBX = (RGB*)malloc(nColorFrameWidth*nColorFrameHeight*sizeof(*pColorRGBX));	//32 bits per RGBX sample
 	pDepth = (UINT16*)malloc(nDepthFrameWidth*nDepthFrameHeight*sizeof(*pDepth));	//16 bits per depth sample
@@ -138,8 +143,9 @@ bool Freenect2Capture::AcquireFrame()
 	registration->apply(rgb, depth, undistorted, registered, true, NULL, depthToColourMap);
 
 	//copy frame data into our buffers so livescan can process it
+	// Use the 'registered' colour data so points in depth and points in colour are equivelant
 	//TODO check dimensions won't overwrite our buffer
-	memcpy (pColorRGBX, rgb->data, rgb->width * rgb->height * rgb->bytes_per_pixel);
+	memcpy (pColorRGBX, registered->data, registered->width * registered->height * registered->bytes_per_pixel);
 
 	//livescan3d expects depth as shorts. freenect2 gives as floats
 	long pixelCounter = 0;
@@ -198,6 +204,7 @@ void Freenect2Capture::MapDepthFrameToCameraSpace(Point3f *pCameraSpacePoints)
 
 // mapping between depth pixel coordinates to the corresponding pixel in the color image
 // pColorSpacePoints 512*424 {X,Y,Z}
+//XXX no longer used
 void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 {
 	//MS kinect pCoordinateMapper->MapDepthFrameToColorSpace(nDepthFrameWidth * nDepthFrameHeight, pDepth, nDepthFrameWidth * nDepthFrameHeight, (ColorSpacePoint*)pColorSpacePoints);
@@ -228,42 +235,26 @@ void Freenect2Capture::MapDepthFrameToColorSpace(Point2f *pColorSpacePoints)
 	}	
 }
 
+//XX this used during calibration
 void Freenect2Capture::MapColorFrameToCameraSpace(Point3f *pCameraSpacePoints)
 {
 	// TODO maybe? like seriously I have no idea.
 	Point3f *out = pCameraSpacePoints;
 	for (int row=0; row < nDepthFrameHeight; row++) {
 		for (int col=0; col < nDepthFrameWidth; col++) {
-			/** Construct a 3-D point with color in a point cloud.
-			   * @param undistorted Undistorted depth frame from apply().
-			   * @param registered Registered color frame from apply().
-			   * @param r Row (y) index in depth image.
-			   * @param c Column (x) index in depth image.
-			   * @param[out] x X coordinate of the 3-D point (meter).
-			   * @param[out] y Y coordinate of the 3-D point (meter).
-			   * @param[out] z Z coordinate of the 3-D point (meter).
-			   * @param[out] rgb Color of the 3-D point (BGRX). To unpack the data, use
-			   *
-			   *     const uint8_t *p = reinterpret_cast<uint8_t*>(&rgb);
-			   *     uint8_t b = p[0];
-			   *     uint8_t g = p[1];
-			   *     uint8_t r = p[2];
-			   */
-			//void getPointXYZRGB (const Frame* undistorted, const Frame* registered, int r, int c, float& x, float& y, float& z, float& rgb) const; 		  
-			float x, y, z, rgb;
-			registration->getPointXYZRGB (undistorted, registered, row, col, x, y, z, rgb);
-			// convert metres to mm as expected by livescan
+			float x, y, z;
+			registration->getPointXYZ (undistorted, row, col, x, y, z);
 			out->X = x;
 			out->Y = y;
 			out->Z = z;
-			// RGB data is ignored - livescan only wants the coordinates
 			out++;
 		}	
 	}	
 }
 
 // pDepthSpacePoints is colour resolution (1920x1080) and gets filled with XY coord of pixel in depth image corresponding to pixel in colour image
-//XXX ths only used by depth preview in livescan so less important to fix
+//XXX this only used by depth preview in livescan so less important to fix
+//XX no longer used
 void Freenect2Capture::MapColorFrameToDepthSpace(Point2f *pDepthSpacePoints)
 {
 	// TODO maybe? like seriously I have no idea.

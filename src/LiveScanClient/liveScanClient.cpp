@@ -552,7 +552,8 @@ void LiveScanClient::StoreFrame(Point3f *vertices, RGB *color)
 		if (vertices[vertexIndex].Z >= 0)
 		{
 			Point3f temp = vertices[vertexIndex];
-			RGB tempColor = color[pCapture->depthToColourMap[vertexIndex]];
+			//RGB tempColor = color[pCapture->depthToColourMap[vertexIndex]];
+			RGB tempColor = color[vertexIndex];
 			if (calibration.bCalibrated)
 			{
 				temp.X += calibration.worldT[0];
