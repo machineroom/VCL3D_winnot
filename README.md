@@ -9,7 +9,7 @@ Building on Mac (Big Sur 11.6):
     - `cmake ..`
     - `make`
     - `make install`
-- Install a bunch of stuff with brew: (at least) opencv, glfw, zstd
+- Install a bunch of stuff with brew: (at least) opencv, glfw, zstd, gflags
 - Return to this code
 - Make a `build` directory and cd into it
 - You'll likely need to `export PKG_CONFIG_PATH="/usr/local/opt/opencv/lib/pkgconfig:/usr/local/lib/pkgconfig"` so cmake can find the dev packages
